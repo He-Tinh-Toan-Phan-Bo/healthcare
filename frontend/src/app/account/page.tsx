@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/shared/ui/button"
@@ -8,30 +8,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/sha
 import { Badge } from "@/shared/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/ui/tabs"
 import { Calendar, Clock, Bell, User } from "lucide-react"
+import { useAuthStore } from "@/store"
+import { useQuery } from "@tanstack/react-query"
+import { getMe } from "@/api/auth"
+import { getMyBookings } from "@/api/bookings"
+import Link from "next/link"
 
 export default function AccountPage() {
   const [activeTab, setActiveTab] = useState("appointments")
+  const auth = useAuthStore()
 
-  const appointments = [
-    {
-      id: 1,
-      clinic: "Phòng Khám Đa Khoa An Khang",
-      service: "Khám Tổng Quát",
-      date: "28 Th12, 2025",
-      time: "10:00",
-      doctor: "BS. Nguyễn Thị Lan",
-      status: "upcoming",
-    },
-    {
-      id: 2,
-      clinic: "Nha Khoa Thành Phố",
-      service: "Khám Nha Khoa",
-      date: "05 Th1, 2026",
-      time: "14:00",
-      doctor: "BS. Trần Văn Minh",
-      status: "upcoming",
-    },
-  ]
+  const meQuery = useQuery({
+    queryKey: ["me"],
+    enabled: auth.isAuthenticated,
+    queryFn: getMe,
+  })
+
+  const myBookingsQuery = useQuery({
+    queryKey: ["myBookings"],
+    enabled: auth.isAuthenticated,
+    queryFn: getMyBookings,
+  })
+
+  useEffect(() => {
+    if (meQuery.data) auth.setUser(meQuery.data)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meQuery.data])
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -64,48 +66,56 @@ export default function AccountPage() {
             <TabsContent value="appointments" className="space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Lịch Hẹn Của Tôi</h2>
-                <Button className="bg-primary">Đặt Lịch Mới</Button>
+                <Link href="/booking">
+                  <Button className="bg-primary">Đặt Lịch Mới</Button>
+                </Link>
               </div>
 
-              {appointments.map((appointment) => (
-                <Card key={appointment.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <CardTitle className="text-lg">{appointment.clinic}</CardTitle>
-                        <Badge className="mt-2 bg-success text-white">Sắp Tới</Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <p className="font-medium">{appointment.service}</p>
-                    </div>
-                    <div className="flex flex-wrap gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>{appointment.date}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                        <span>{appointment.time}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span>{appointment.doctor}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2 pt-2">
-                      <Button variant="outline" className="flex-1 bg-transparent">
-                        Đổi Lịch
-                      </Button>
-                      <Button variant="destructive" className="flex-1">
-                        Hủy
-                      </Button>
-                    </div>
+              {!auth.isAuthenticated ? (
+                <Card>
+                  <CardContent className="py-8 text-center">
+                    <div className="mb-2 text-sm text-muted-foreground">Bạn chưa đăng nhập.</div>
+                    <Link href="/login">
+                      <Button className="bg-primary">Đăng Nhập</Button>
+                    </Link>
                   </CardContent>
                 </Card>
-              ))}
+              ) : myBookingsQuery.isLoading ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                    Đang tải lịch hẹn...
+                  </CardContent>
+                </Card>
+              ) : (
+                (myBookingsQuery.data?.items ?? []).map((b: any) => (
+                  <Card key={b.id}>
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-lg">{b.clinic?.name ?? "Phòng khám"}</CardTitle>
+                          <Badge className="mt-2 bg-success text-white">{String(b.status)}</Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex flex-wrap gap-4 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span>{String(b.bookingDate).slice(0, 10)}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>{b.bookingTime}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span>{b.doctor?.name ?? "—"}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </TabsContent>
 
             {/* Profile Tab */}
@@ -119,15 +129,15 @@ export default function AccountPage() {
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
                       <p className="mb-1 text-sm font-medium">Họ và Tên</p>
-                      <p className="text-muted-foreground">Nguyễn Văn A</p>
+                      <p className="text-muted-foreground">{auth.user?.name ?? "—"}</p>
                     </div>
                     <div>
                       <p className="mb-1 text-sm font-medium">Email</p>
-                      <p className="text-muted-foreground">nguyenvana@example.com</p>
+                      <p className="text-muted-foreground">{auth.user?.email ?? "—"}</p>
                     </div>
                     <div>
                       <p className="mb-1 text-sm font-medium">Số Điện Thoại</p>
-                      <p className="text-muted-foreground">0912345678</p>
+                      <p className="text-muted-foreground">{auth.user?.phone ?? "—"}</p>
                     </div>
                     <div>
                       <p className="mb-1 text-sm font-medium">Ngày Sinh</p>
@@ -138,7 +148,9 @@ export default function AccountPage() {
                       <p className="text-muted-foreground">123 Đường ABC, Quận 1, TP.HCM</p>
                     </div>
                   </div>
-                  <Button className="mt-4 bg-primary">Chỉnh Sửa Thông Tin</Button>
+                  <Button className="mt-4 bg-primary" disabled>
+                    Chỉnh Sửa Thông Tin
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

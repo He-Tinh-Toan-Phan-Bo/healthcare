@@ -9,12 +9,25 @@ import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/shared/ui/radio-group"
 import { Calendar, CheckCircle2, ChevronRight } from "lucide-react"
+import { useMutation } from "@tanstack/react-query"
+import { postBooking } from "@/api/bookings"
+import { useAuthStore } from "@/store"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export default function BookingPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const auth = useAuthStore()
+
   const [step, setStep] = useState(1)
   const [selectedPackage, setSelectedPackage] = useState("")
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedTime, setSelectedTime] = useState("")
+  const [clinicId, setClinicId] = useState(searchParams.get("clinicId") || "")
+
+  const [patientName, setPatientName] = useState("")
+  const [patientPhone, setPatientPhone] = useState("")
+  const [patientEmail, setPatientEmail] = useState("")
 
   const packages = [
     { id: "basic", name: "Gói Khám Sức Khỏe Cơ Bản", price: "2.000.000đ" },
@@ -25,6 +38,19 @@ export default function BookingPage() {
   const timeSlots = {
     today: ["10:00", "11:30", "14:00", "16:30"],
     tomorrow: ["9:00", "10:30", "13:00", "15:00", "17:00"],
+  }
+
+  const createBookingMutation = useMutation({
+    mutationFn: postBooking,
+    onSuccess: () => {
+      router.push("/account")
+    },
+  })
+
+  const resolveDate = () => {
+    const now = new Date()
+    const d = selectedDate === "tomorrow" ? new Date(now.getTime() + 24 * 60 * 60 * 1000) : now
+    return d.toISOString().slice(0, 10)
   }
 
   return (
@@ -161,19 +187,54 @@ export default function BookingPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="space-y-4">
+                    {!auth.isAuthenticated && (
+                      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                        Bạn cần đăng nhập trước khi đặt lịch.{" "}
+                        <button className="underline" onClick={() => router.push("/login")}>
+                          Đăng nhập
+                        </button>
+                      </div>
+                    )}
+
+                    <div>
+                      <Label htmlFor="clinicId">Clinic ID</Label>
+                      <Input
+                        id="clinicId"
+                        placeholder="UUID của phòng khám"
+                        value={clinicId}
+                        onChange={(e) => setClinicId(e.target.value)}
+                      />
+                    </div>
                     <div>
                       <Label htmlFor="name">Họ và Tên</Label>
-                      <Input id="name" placeholder="Nguyễn Văn A" />
+                      <Input
+                        id="name"
+                        placeholder="Nguyễn Văn A"
+                        value={patientName}
+                        onChange={(e) => setPatientName(e.target.value)}
+                      />
                     </div>
 
                     <div>
                       <Label htmlFor="phone">Số Điện Thoại</Label>
-                      <Input id="phone" type="tel" placeholder="0912345678" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="0912345678"
+                        value={patientPhone}
+                        onChange={(e) => setPatientPhone(e.target.value)}
+                      />
                     </div>
 
                     <div>
                       <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" placeholder="email@example.com" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="email@example.com"
+                        value={patientEmail}
+                        onChange={(e) => setPatientEmail(e.target.value)}
+                      />
                     </div>
                   </div>
 
@@ -205,11 +266,36 @@ export default function BookingPage() {
                     <Button variant="outline" onClick={() => setStep(2)}>
                       Quay Lại
                     </Button>
-                    <Button className="bg-primary">
+                    <Button
+                      className="bg-primary"
+                      disabled={
+                        createBookingMutation.isPending ||
+                        !auth.isAuthenticated ||
+                        !clinicId ||
+                        !patientName ||
+                        !patientEmail ||
+                        !patientPhone
+                      }
+                      onClick={() =>
+                        createBookingMutation.mutate({
+                          clinicId,
+                          patientName,
+                          patientEmail,
+                          patientPhone,
+                          bookingDate: resolveDate(),
+                          bookingTime: selectedTime.split("-")[1],
+                        })
+                      }
+                    >
                       <Calendar className="mr-2 h-4 w-4" />
-                      Xác Nhận Đặt Lịch
+                      {createBookingMutation.isPending ? "Đang đặt lịch..." : "Xác Nhận Đặt Lịch"}
                     </Button>
                   </div>
+                  {createBookingMutation.isError && (
+                    <div className="text-sm text-destructive">
+                      Đặt lịch thất bại. Vui lòng kiểm tra lại thông tin.
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

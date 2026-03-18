@@ -1,3 +1,5 @@
+"use client"
+
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/shared/ui/button"
@@ -6,29 +8,19 @@ import { Badge } from "@/shared/ui/badge"
 import { Star, MapPin, Clock, Phone, Globe, CheckCircle2 } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useParams } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
+import { getClinicById } from "@/api/clinics"
 
 export default function ClinicDetailPage() {
-  const services = [
-    { name: "Khám Tổng Quát", price: "500.000đ" },
-    { name: "Khám Chuyên Khoa", price: "800.000đ" },
-    { name: "Xét Nghiệm", price: "Tùy loại" },
-    { name: "Khám Sức Khỏe", price: "1.500.000đ" },
-    { name: "Tiêm Chủng", price: "300.000đ" },
-    { name: "Thủ Thuật Nhỏ", price: "600.000đ" },
-  ]
+  const params = useParams<{ id: string }>()
+  const id = params?.id
 
-  const packages = [
-    {
-      name: "Gói Sức Khỏe Cơ Bản",
-      price: "2.000.000đ",
-      features: ["Xét nghiệm máu tổng quát", "Đo huyết áp", "Khám tổng quát"],
-    },
-  ]
-
-  const timeSlots = {
-    today: ["10:00", "11:30", "14:00", "16:30"],
-    tomorrow: ["9:00", "10:30", "13:00", "15:00", "17:00"],
-  }
+  const { data: clinic, isLoading } = useQuery({
+    queryKey: ["clinic", id],
+    enabled: !!id,
+    queryFn: () => getClinicById(String(id)),
+  })
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -37,7 +29,12 @@ export default function ClinicDetailPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <div className="relative h-80 w-full">
-          <Image src="/modern-healthcare-clinic-interior-reception.jpg" alt="Phòng Khám Đa Khoa An Khang" fill className="object-cover" />
+          <Image
+            src={clinic?.image || "/modern-healthcare-clinic-interior-reception.jpg"}
+            alt={clinic?.name || "Clinic"}
+            fill
+            className="object-cover"
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         </div>
 
@@ -48,7 +45,7 @@ export default function ClinicDetailPage() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div className="flex-1">
                     <div className="mb-2 flex items-center gap-3">
-                      <CardTitle className="text-2xl">Phòng Khám Đa Khoa An Khang</CardTitle>
+                      <CardTitle className="text-2xl">{clinic?.name ?? (isLoading ? "Đang tải..." : "Không tìm thấy")}</CardTitle>
                       <Badge className="bg-success text-white">
                         <span className="mr-1">●</span> Đang Mở Cửa
                       </Badge>
@@ -56,14 +53,13 @@ export default function ClinicDetailPage() {
                     <div className="mb-4 flex items-center gap-2">
                       <div className="flex items-center gap-1">
                         <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                        <span className="text-xl font-semibold">4.8</span>
+                        <span className="text-xl font-semibold">{clinic?.rating ?? 0}</span>
                       </div>
-                      <span className="text-muted-foreground">(256 đánh giá)</span>
+                      <span className="text-muted-foreground">({clinic?.reviewCount ?? 0} đánh giá)</span>
                     </div>
                     <p className="text-muted-foreground">
-                      Phòng Khám Đa Khoa An Khang là cơ sở y tế hiện đại cung cấp dịch vụ chăm sóc sức khỏe toàn diện.
-                      Đội ngũ bác sĩ giàu kinh nghiệm và chuyên môn y tế chuyên nghiệp cam kết mang đến dịch vụ chăm sóc
-                      sức khỏe chất lượng trong môi trường thoải mái.
+                      {clinic?.description ||
+                        "Phòng khám cung cấp các dịch vụ chăm sóc sức khỏe chất lượng, đội ngũ bác sĩ giàu kinh nghiệm."}
                     </p>
                   </div>
                   <Link href="/booking">
@@ -89,81 +85,53 @@ export default function ClinicDetailPage() {
                     <MapPin className="mt-1 h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Địa chỉ</p>
-                      <p className="text-muted-foreground">123 Đường Lê Lợi, Quận 1, TP.HCM</p>
+                      <p className="text-muted-foreground">{clinic?.address || "—"}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Phone className="mt-1 h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Điện thoại</p>
-                      <p className="text-muted-foreground">1900 xxxx</p>
+                      <p className="text-muted-foreground">{clinic?.phone || "—"}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Globe className="mt-1 h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Website</p>
-                      <p className="text-muted-foreground">www.phongkhamankang.vn</p>
+                      <p className="text-muted-foreground">{clinic?.website || "—"}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Clock className="mt-1 h-5 w-5 text-primary" />
                     <div>
                       <p className="font-medium">Giờ làm việc</p>
-                      <p className="text-muted-foreground">T2-T7: 8:00 - 20:00</p>
+                      <p className="text-muted-foreground">{clinic?.openingHours || "—"}</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Services */}
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>Dịch Vụ Cung Cấp</CardTitle>
-                  <CardDescription>Các dịch vụ khám và điều trị tại phòng khám</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    {services.map((service, index) => (
-                      <div key={index} className="flex items-center justify-between rounded-lg border p-3">
-                        <span>{service.name}</span>
-                        <span className="font-semibold text-primary">{service.price}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Packages */}
+              {/* Doctors */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Gói Khám Sức Khỏe</CardTitle>
-                  <CardDescription>Các gói khám sức khỏe tổng quát</CardDescription>
+                  <CardTitle>Bác Sĩ</CardTitle>
+                  <CardDescription>Danh sách bác sĩ tại phòng khám</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {packages.map((pkg, index) => (
-                    <Card key={index} className="border-primary/20">
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                          <span className="text-xl font-bold text-primary">{pkg.price}</span>
+                  {!clinic?.doctors?.length ? (
+                    <div className="text-sm text-muted-foreground">Chưa có dữ liệu bác sĩ.</div>
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {clinic.doctors.map((d) => (
+                        <div key={d.id} className="rounded-lg border p-3">
+                          <div className="font-medium">{d.name}</div>
+                          <div className="text-sm text-muted-foreground">{d.specialty.name}</div>
+                          <div className="mt-1 text-sm text-muted-foreground">Kinh nghiệm: {d.experience} năm</div>
                         </div>
-                      </CardHeader>
-                      <CardContent>
-                        <ul className="space-y-2">
-                          {pkg.features.map((feature, idx) => (
-                            <li key={idx} className="flex items-start gap-2">
-                              <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-success" />
-                              <span className="text-sm">{feature}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <Link href="/booking" className="mt-4 block">
-                          <Button className="w-full bg-primary">Đặt Ngay</Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -178,7 +146,7 @@ export default function ClinicDetailPage() {
                   <div>
                     <h3 className="mb-3 font-semibold">Hôm nay</h3>
                     <div className="grid grid-cols-2 gap-2">
-                      {timeSlots.today.map((time) => (
+                      {["10:00", "11:30", "14:00", "16:30"].map((time) => (
                         <Button
                           key={time}
                           variant="outline"
@@ -193,7 +161,7 @@ export default function ClinicDetailPage() {
                   <div>
                     <h3 className="mb-3 font-semibold">Ngày mai</h3>
                     <div className="grid grid-cols-2 gap-2">
-                      {timeSlots.tomorrow.map((time) => (
+                      {["9:00", "10:30", "13:00", "15:00", "17:00"].map((time) => (
                         <Button
                           key={time}
                           variant="outline"

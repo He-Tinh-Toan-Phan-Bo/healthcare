@@ -2,7 +2,7 @@ import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
-import { LanguageProvider } from "@/shared/provider/LanguageProvider"
+import { LanguageProvider, QueryProvider, ThemeProvider } from "@/shared/provider"
 import "./globals.css"
 
 const inter = Inter({
@@ -40,9 +40,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <LanguageProvider>{children}</LanguageProvider>
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+          <QueryProvider>
+            <LanguageProvider>{children}</LanguageProvider>
+          </QueryProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

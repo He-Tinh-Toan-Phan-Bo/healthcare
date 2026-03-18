@@ -1,66 +1,28 @@
 version: "3.8"
 
 services:
-  # MySQL Database for Clinic Booking System
-  mysql:
-    image: mysql:8.0
-    container_name: clinic_booking_mysql
+  postgres:
+    image: postgres:16
+    container_name: healthcare_postgres
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-healthcare}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "3306:3306"
+      - "5432:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./database/init:/docker-entrypoint-initdb.d
-    command: >
-      --default-authentication-plugin=mysql_native_password
-      --character-set-server=utf8mb4
-      --collation-server=utf8mb4_unicode_ci
-      --max_connections=200
-      --innodb_buffer_pool_size=256M
+      - postgres_data:/var/lib/postgresql/data
     networks:
       - clinic_network
     healthcheck:
-      test:
-        [
-          "CMD",
-          "mysqladmin",
-          "ping",
-          "-h",
-          "localhost",
-          "-u",
-          "root",
-          "-proot_password_123",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-healthcare}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # phpMyAdmin - Database Management UI (Optional)
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: clinic_booking_phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: ${PMA_HOST}
-      PMA_PORT: ${PMA_PORT}
-      PMA_USER: ${PMA_USER}
-      PMA_PASSWORD: ${PMA_PASSWORD}
-      UPLOAD_LIMIT: 50M
-    ports:
-      - "8081:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - clinic_network
-
 volumes:
-  mysql_data:
+  postgres_data:
     driver: local
 
 networks:

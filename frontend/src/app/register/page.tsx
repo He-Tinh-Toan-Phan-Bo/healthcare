@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/shared/ui/button"
@@ -8,8 +9,31 @@ import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
 import { Calendar } from "lucide-react"
 import Link from "next/link"
+import { useMutation } from "@tanstack/react-query"
+import { postRegister } from "@/api/auth"
+import { useAuthStore } from "@/store"
+import { useRouter } from "next/navigation"
 
 export default function RegisterPage() {
+  const router = useRouter()
+  const auth = useAuthStore()
+
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+
+  const registerMutation = useMutation({
+    mutationFn: postRegister,
+    onSuccess: (data) => {
+      auth.login(data.user, data.accessToken)
+      router.push("/account")
+    },
+  })
+
+  const passwordMismatch = password && confirmPassword && password !== confirmPassword
+
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
@@ -33,27 +57,58 @@ export default function RegisterPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="fullname">Họ và Tên</Label>
-                  <Input id="fullname" placeholder="Nguyễn Văn A" />
+                  <Input id="fullname" placeholder="Nguyễn Văn A" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone">Số Điện Thoại</Label>
-                  <Input id="phone" type="tel" placeholder="0912345678" />
+                  <Input id="phone" type="tel" placeholder="0912345678" value={phone} onChange={(e) => setPhone(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
-                  <Input id="email" type="email" placeholder="email@example.com" />
+                  <Input id="email" type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">Mật khẩu</Label>
-                  <Input id="password" type="password" placeholder="••••••••" />
+                  <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Xác nhận Mật khẩu</Label>
-                  <Input id="confirm-password" type="password" placeholder="••••••••" />
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
                 </div>
+                {passwordMismatch && (
+                  <div className="text-sm text-destructive">Mật khẩu xác nhận không khớp.</div>
+                )}
+                {registerMutation.isError && (
+                  <div className="text-sm text-destructive">Đăng ký thất bại. Vui lòng thử lại.</div>
+                )}
               </CardContent>
               <CardFooter className="flex flex-col gap-4">
-                <Button className="w-full bg-primary">Đăng Ký</Button>
+                <Button
+                  className="w-full bg-primary"
+                  disabled={
+                    registerMutation.isPending ||
+                    !name ||
+                    !email ||
+                    !password ||
+                    passwordMismatch
+                  }
+                  onClick={() =>
+                    registerMutation.mutate({
+                      name,
+                      email,
+                      phone: phone || undefined,
+                      password,
+                    })
+                  }
+                >
+                  {registerMutation.isPending ? "Đang đăng ký..." : "Đăng Ký"}
+                </Button>
                 <p className="text-center text-sm text-muted-foreground">
                   Đã có tài khoản?{" "}
                   <Link href="/login" className="text-primary hover:underline">

@@ -1,0 +1,144 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  PATIENT
+  DOCTOR
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  phone         String?  @db.VarChar(20)
+  avatar        String?  @db.Text
+  role          UserRole @default(PATIENT)
+  passwordHash  String   @map("password_hash")
+  isActive      Boolean  @default(true) @map("is_active")
+  emailVerified Boolean  @default(false) @map("email_verified")
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  doctorProfile Doctor?
+  bookings      Booking[]
+
+  @@map("users")
+  @@index([role])
+  @@index([createdAt])
+}
+
+model Clinic {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?  @db.Text
+  address      String   @db.Text
+  phone        String?  @db.VarChar(20)
+  email        String?  @db.VarChar(255)
+  website      String?  @db.Text
+  rating       Decimal  @default(0.0) @db.Decimal(2, 1)
+  reviewCount  Int      @default(0) @map("review_count")
+  image        String?  @db.Text
+  isOpen       Boolean  @default(true) @map("is_open")
+  openingHours String?  @map("opening_hours") @db.Text
+  latitude     Decimal? @db.Decimal(10, 8)
+  longitude    Decimal? @db.Decimal(11, 8)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  doctors  Doctor[]
+  bookings Booking[]
+
+  @@map("clinics")
+  @@index([isOpen, rating])
+  @@index([createdAt])
+}
+
+model Specialty {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  doctors Doctor[]
+
+  @@map("specialties")
+}
+
+model Doctor {
+  id          String  @id @default(uuid())
+  userId      String? @unique @map("user_id")
+  clinicId    String  @map("clinic_id")
+  specialtyId String  @map("specialty_id")
+
+  name           String
+  qualifications Json?
+  experience     Int     @default(0)
+  avatar         String? @db.Text
+  bio            String? @db.Text
+  isAvailable    Boolean @default(true) @map("is_available")
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  clinic    Clinic    @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  specialty Specialty @relation(fields: [specialtyId], references: [id], onDelete: Restrict)
+  bookings  Booking[]
+
+  @@map("doctors")
+  @@index([clinicId, specialtyId])
+}
+
+model Booking {
+  id           String        @id @default(uuid())
+  userId       String        @map("user_id")
+  clinicId     String        @map("clinic_id")
+  doctorId     String?       @map("doctor_id")
+
+  patientName  String        @map("patient_name")
+  patientEmail String        @map("patient_email")
+  patientPhone String        @map("patient_phone")
+  patientDob   DateTime?     @map("patient_dob") @db.Date
+  patientGender Gender?      @map("patient_gender")
+  notes        String?       @db.Text
+
+  bookingDate  DateTime      @map("booking_date") @db.Date
+  bookingTime  String        @map("booking_time") @db.VarChar(10)
+  status       BookingStatus @default(PENDING)
+
+  cancellationReason String?  @map("cancellation_reason") @db.Text
+  cancelledAt        DateTime? @map("cancelled_at") @db.Timestamptz
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clinic Clinic @relation(fields: [clinicId], references: [id], onDelete: Cascade)
+  doctor Doctor? @relation(fields: [doctorId], references: [id], onDelete: SetNull)
+
+  @@map("bookings")
+  @@index([userId, createdAt])
+  @@index([clinicId, bookingDate])
+  @@index([status])
+}
+

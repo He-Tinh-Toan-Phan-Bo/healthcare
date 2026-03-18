@@ -1,19 +1,41 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { typeOrmAsyncConfig } from './shared/config/typeorm.config';
+import { PrismaModule } from './prisma/prisma.module';
+import { validate } from './config/env.validation';
+import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
+import { UsersModule } from './users/users.module';
+import { APP_GUARD } from '@nestjs/core';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { ClinicsModule } from './clinics/clinics.module';
+import { DoctorsModule } from './doctors/doctors.module';
+import { BookingsModule } from './bookings/bookings.module';
+import { SpecialtiesModule } from './specialties/specialties.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: '.env',
+      validate,
     }),
-    TypeOrmModule.forRootAsync(typeOrmAsyncConfig),
+    PrismaModule,
+    HealthModule,
+    AuthModule,
+    UsersModule,
+    ClinicsModule,
+    DoctorsModule,
+    BookingsModule,
+    SpecialtiesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
+    },
+  ],
 })
 export class AppModule { }
