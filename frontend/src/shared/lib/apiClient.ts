@@ -18,7 +18,13 @@ apiClient.interceptors.request.use((config) => {
 })
 
 apiClient.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // If it's the standardized response, extract .data
+    if (res.data && typeof res.data === 'object' && 'data' in res.data) {
+      return { ...res, data: res.data.data }
+    }
+    return res
+  },
   (error: AxiosError) => {
     const status = error.response?.status
     if (status === 401 && typeof window !== 'undefined') {
@@ -27,4 +33,5 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   },
 )
+
 

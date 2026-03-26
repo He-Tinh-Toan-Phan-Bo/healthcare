@@ -12,9 +12,17 @@ export class QueryDoctorsDto {
   @IsString()
   specialtyId?: string;
 
-  @ApiPropertyOptional({ description: 'Search by doctor name' })
   @IsOptional()
   @IsString()
   q?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  page?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  limit?: string;
+
 }
 

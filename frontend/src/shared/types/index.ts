@@ -14,8 +14,10 @@ export interface Clinic {
     email?: string
     rating: number
     reviewCount: number
+    numReviews?: number
     image: string
     isOpen: boolean
+
     openingHours: string
     specialties?: string[]
     services?: string[]
@@ -110,3 +112,16 @@ export interface SortOptions {
     field: string
     order: "asc" | "desc"
 }
+
+export interface Doctor {
+    id: string
+    name: string
+    avatar?: string
+    experience: number
+    isAvailable: boolean
+    specialty: { id: string; name: string }
+    rating: number
+    reviewCount: number
+    image?: string
+}
+

@@ -29,7 +29,36 @@ class EnvironmentVariables {
   @IsString()
   @IsOptional()
   CORS_ORIGIN: string = 'http://localhost:3000';
+
+  @IsString()
+  @IsOptional()
+  REDIS_URL: string = 'redis://localhost:6379';
+
+  @IsString()
+  @IsOptional()
+  SMTP_HOST: string;
+
+  @IsNumber()
+  @IsOptional()
+  SMTP_PORT: number = 587;
+
+  @IsString()
+  @IsOptional()
+  SMTP_USER: string;
+
+  @IsString()
+  @IsOptional()
+  SMTP_PASS: string;
+
+  @IsString()
+  @IsOptional()
+  SMTP_FROM: string;
+
+  @IsNumber()
+  @IsOptional()
+  REGISTER_OTP_TTL_SECONDS: number = 300;
 }
+
 
 export function validate(config: Record<string, unknown>) {
   const validated = plainToInstance(EnvironmentVariables, config, {

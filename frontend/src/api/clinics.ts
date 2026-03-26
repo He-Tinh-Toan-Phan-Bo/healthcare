@@ -20,16 +20,23 @@ type ClinicsListResponse = {
 
 export async function getClinics(params?: { q?: string; page?: number; limit?: number }) {
   const res = await apiClient.get<ClinicsListResponse>('/v1/clinics', { params })
+  const data = res.data as any
+  
+  // The interceptor might have already extracted the data
+  const items = data.items || []
+  
   return {
-    ...res.data,
-    items: res.data.items.map((c) => ({
+    ...data,
+    items: items.map((c: any) => ({
       ...c,
-      rating: Number(c.rating),
+      rating: Number(c.rating || 0),
+      numReviews: c.reviewCount || 0,
       image: c.image ?? '',
       openingHours: c.openingHours ?? '',
     })),
   }
 }
+
 
 export async function getClinicById(id: string) {
   const res = await apiClient.get<any>(`/v1/clinics/${id}`)

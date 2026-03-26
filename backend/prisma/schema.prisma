@@ -10,7 +10,9 @@ enum UserRole {
   PATIENT
   DOCTOR
   ADMIN
+  SUPER_ADMIN
 }
+
 
 enum BookingStatus {
   PENDING

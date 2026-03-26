@@ -6,7 +6,9 @@ import {
   PackagesSection,
   HealthGuideSection,
   ClinicsSection,
+  DoctorsSection,
   HowItWorksSection,
+
   CTASection,
 } from "@/features/home"
 
@@ -21,6 +23,8 @@ export default function HomePage() {
         <PackagesSection />
         <HealthGuideSection />
         <ClinicsSection />
+        <DoctorsSection />
+
         <HowItWorksSection />
         <CTASection />
       </main>

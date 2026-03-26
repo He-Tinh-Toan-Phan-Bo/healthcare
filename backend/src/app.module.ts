@@ -13,6 +13,8 @@ import { ClinicsModule } from './clinics/clinics.module';
 import { DoctorsModule } from './doctors/doctors.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { SpecialtiesModule } from './specialties/specialties.module';
+import { RedisModule } from './common/redis/redis.module';
+import { MailModule } from './common/mail/mail.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { SpecialtiesModule } from './specialties/specialties.module';
       validate,
     }),
     PrismaModule,
+    RedisModule,
+    MailModule,
     HealthModule,
     AuthModule,
     UsersModule,

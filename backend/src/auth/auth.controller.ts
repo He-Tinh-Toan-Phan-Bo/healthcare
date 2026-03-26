@@ -4,6 +4,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { Public } from './decorators/public.decorator';
+import { VerifyRegisterOtpDto } from './dto/verify-register-otp.dto';
 
 @ApiTags('Auth')
 @Controller({ path: 'auth', version: '1' })
@@ -14,6 +15,12 @@ export class AuthController {
   @Post('register')
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
+  }
+
+  @Public()
+  @Post('verify-register-otp')
+  verifyRegisterOtp(@Body() dto: VerifyRegisterOtpDto) {
+    return this.authService.verifyRegisterOtp(dto);
   }
 
   @Public()
