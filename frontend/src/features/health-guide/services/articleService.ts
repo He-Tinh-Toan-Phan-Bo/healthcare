@@ -1,28 +1,40 @@
-import { apiClient } from "@/shared/lib/client"
+import {
+    getArticleBySlug,
+    getArticles,
+    getArticlesByCategory,
+    getFeaturedArticles,
+    type PublicArticle,
+} from "@/api/articles"
+import { ARTICLE_DEFAULTS } from "@/shared/constants"
 import type { Article, ApiResponse, PaginatedResponse } from "@/shared/types"
-import { MOCK_ARTICLES } from "@/shared/constants/mockData"
+
+function toArticle(item: PublicArticle): Article {
+    return {
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        image: item.image ?? "",
+        category: item.category,
+        readTime: item.readTime,
+        publishedAt: item.publishedAt,
+        slug: item.slug,
+    }
+}
 
 export const articleService = {
     /**
      * Get all articles with pagination
      */
     async getAll(page = 1, limit = 10): Promise<PaginatedResponse<Article>> {
-        try {
-            const response = await apiClient.get<PaginatedResponse<Article>>("/articles", {
-                params: { page, limit },
-            })
-            return response
-        } catch (error) {
-            // Fallback to mock data
-            return {
-                data: MOCK_ARTICLES,
-                pagination: {
-                    page: 1,
-                    limit: 10,
-                    total: MOCK_ARTICLES.length,
-                    totalPages: 1,
-                },
-            }
+        const response = await getArticles({ page, limit })
+        return {
+            data: response.items.map(toArticle),
+            pagination: {
+                page: response.page,
+                limit: response.limit,
+                total: response.total,
+                totalPages: Math.max(1, Math.ceil(response.total / response.limit)),
+            },
         }
     },
 
@@ -30,18 +42,10 @@ export const articleService = {
      * Get article by slug
      */
     async getBySlug(slug: string): Promise<ApiResponse<Article>> {
-        try {
-            const response = await apiClient.get<ApiResponse<Article>>(`/articles/${slug}`)
-            return response
-        } catch (error) {
-            const article = MOCK_ARTICLES.find((a) => a.slug === slug)
-            if (!article) {
-                throw new Error("Article not found")
-            }
-            return {
-                data: article,
-                success: true,
-            }
+        const article = await getArticleBySlug(slug)
+        return {
+            data: toArticle(article),
+            success: true,
         }
     },
 
@@ -49,15 +53,10 @@ export const articleService = {
      * Get articles by category
      */
     async getByCategory(category: string): Promise<ApiResponse<Article[]>> {
-        try {
-            const response = await apiClient.get<ApiResponse<Article[]>>(`/articles/category/${category}`)
-            return response
-        } catch (error) {
-            const filtered = MOCK_ARTICLES.filter((article) => article.category === category)
-            return {
-                data: filtered,
-                success: true,
-            }
+        const response = await getArticlesByCategory(category)
+        return {
+            data: response.items.map(toArticle),
+            success: true,
         }
     },
 
@@ -65,14 +64,10 @@ export const articleService = {
      * Get featured articles
      */
     async getFeatured(): Promise<ApiResponse<Article[]>> {
-        try {
-            const response = await apiClient.get<ApiResponse<Article[]>>("/articles/featured")
-            return response
-        } catch (error) {
-            return {
-                data: MOCK_ARTICLES.slice(0, 3),
-                success: true,
-            }
+        const response = await getFeaturedArticles(ARTICLE_DEFAULTS.HOME_LIMIT)
+        return {
+            data: response.items.map(toArticle),
+            success: true,
         }
     },
 }

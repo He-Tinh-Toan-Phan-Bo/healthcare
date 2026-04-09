@@ -12,10 +12,33 @@ import Link from "next/link"
 import { useMutation } from "@tanstack/react-query"
 import { postLogin } from "@/api/auth"
 import { useAuthStore } from "@/store"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
+
+function normalizeRole(role?: string) {
+  const normalized = String(role || "").toUpperCase()
+  if (normalized === "SUPER_ADMIN") {
+    return "ADMIN"
+  }
+  return normalized
+}
+
+function resolveLoginRedirect(role: string, nextPath: string | null) {
+  const safeNext = nextPath?.startsWith("/") ? nextPath : null
+
+  if (safeNext?.startsWith("/admin")) {
+    return "/admin"
+  }
+
+  if (role === "ADMIN" || role === "DOCTOR") {
+    return safeNext ?? "/admin"
+  }
+
+  return safeNext ?? "/account"
+}
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const auth = useAuthStore()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -24,7 +47,10 @@ export default function LoginPage() {
     mutationFn: postLogin,
     onSuccess: (data) => {
       auth.login(data.user, data.accessToken)
-      router.push("/account")
+      const normalizedRole = normalizeRole(data.user.role)
+      const nextPath = searchParams.get("next")
+      const redirectTo = resolveLoginRedirect(normalizedRole, nextPath)
+      router.replace(redirectTo)
     },
   })
 

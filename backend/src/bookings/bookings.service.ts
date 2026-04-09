@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 
@@ -23,7 +24,7 @@ export class BookingsService {
         where: { id: dto.doctorId },
         select: { id: true, clinicId: true },
       });
-      if (!doctor || doctor.clinicId !== dto.clinicId) {
+      if (!doctor || doctor?.clinicId !== dto.clinicId) {
         throw new BadRequestException({
           code: 'INVALID_DOCTOR',
           message: 'Invalid doctorId for this clinic',
@@ -37,6 +38,28 @@ export class BookingsService {
         code: 'INVALID_BOOKING_DATE',
         message: 'Invalid bookingDate',
       });
+    }
+
+    // Slot is considered locked when another patient already has a pending/confirmed booking.
+    if (dto.doctorId) {
+      const existingBooking = await this.prisma.booking.findFirst({
+        where: {
+          doctorId: dto.doctorId,
+          bookingDate,
+          bookingTime: dto.bookingTime,
+          status: {
+            in: [BookingStatus.PENDING, BookingStatus.CONFIRMED],
+          },
+        },
+        select: { id: true },
+      });
+
+      if (existingBooking) {
+        throw new BadRequestException({
+          code: 'BOOKING_SLOT_UNAVAILABLE',
+          message: 'This booking slot is not available',
+        });
+      }
     }
 
     const patientDob = dto.patientDob ? new Date(dto.patientDob) : undefined;
@@ -94,4 +117,3 @@ export class BookingsService {
     return { items };
   }
 }
-

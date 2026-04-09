@@ -16,7 +16,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('Seeding super admin using pg direct connection...');
+  console.log('Seeding admin using pg direct connection...');
   console.log('Target Email:', seedEmail);
 
   const client = new Client({
@@ -40,10 +40,10 @@ async function main() {
     await client.query(
       `INSERT INTO "users" (id, name, email, password_hash, role, email_verified, is_active, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [id, 'Super Admin', seedEmail, hashedPassword, 'SUPER_ADMIN', true, true, now, now]
+      [id, 'Admin', seedEmail, hashedPassword, 'ADMIN', true, true, now, now]
     );
 
-    console.log(`Super admin created with ID: ${id}`);
+    console.log(`Admin created with ID: ${id}`);
   } catch (err) {
     console.error('Error seeding admin:', err);
     process.exit(1);

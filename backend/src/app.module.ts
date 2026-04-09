@@ -9,12 +9,16 @@ import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { RolesGuard } from './auth/guards/roles.guard';
 import { ClinicsModule } from './clinics/clinics.module';
 import { DoctorsModule } from './doctors/doctors.module';
 import { BookingsModule } from './bookings/bookings.module';
 import { SpecialtiesModule } from './specialties/specialties.module';
 import { RedisModule } from './common/redis/redis.module';
 import { MailModule } from './common/mail/mail.module';
+import { DoctorAdminModule } from './doctor-admin/doctor-admin.module';
+import { AdminModule } from './admin/admin.module';
+import { ArticlesModule } from './articles/articles.module';
 
 @Module({
   imports: [
@@ -32,6 +36,9 @@ import { MailModule } from './common/mail/mail.module';
     DoctorsModule,
     BookingsModule,
     SpecialtiesModule,
+    ArticlesModule,
+    DoctorAdminModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [
@@ -40,6 +47,10 @@ import { MailModule } from './common/mail/mail.module';
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
-export class AppModule { }
+export class AppModule {}

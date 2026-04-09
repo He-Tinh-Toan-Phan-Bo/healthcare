@@ -1,3 +1,5 @@
+"use client"
+
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card"
@@ -5,60 +7,58 @@ import { Badge } from "@/shared/ui/badge"
 import { Clock } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
+import { useMemo, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
+import { getArticleCategories, getArticles } from "@/api/articles"
+import { ARTICLE_DEFAULTS, ARTICLE_QUERY_KEYS, ROUTES } from "@/shared/constants"
+
+const healthGuideSkeletonIds = [
+  "health-guide-skeleton-1",
+  "health-guide-skeleton-2",
+  "health-guide-skeleton-3",
+  "health-guide-skeleton-4",
+  "health-guide-skeleton-5",
+  "health-guide-skeleton-6",
+]
+
+function formatPublishedDate(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return date.toLocaleDateString("vi-VN")
+}
 
 export default function HealthGuidePage() {
-  const articles = [
-    {
-      id: 1,
-      title: "10 Thói Quen Tốt Cho Sức Khỏe Tim Mạch",
-      category: "Tim mạch",
-      excerpt: "Khám phá các thói quen đơn giản giúp bảo vệ tim mạch và cải thiện sức khỏe tổng thể của bạn.",
-      readTime: "5 phút đọc",
-      date: "25/12/2025",
-    },
-    {
-      id: 2,
-      title: "Hướng Dẫn Chăm Sóc Răng Miệng Đúng Cách",
-      category: "Nha khoa",
-      excerpt: "Tìm hiểu cách vệ sinh răng miệng đúng cách và phòng ngừa các bệnh lý về răng.",
-      readTime: "4 phút đọc",
-      date: "23/12/2025",
-    },
-    {
-      id: 3,
-      title: "Vai Trò Của Xét Nghiệm Sức Khỏe Định Kỳ",
-      category: "Sức khỏe tổng quát",
-      excerpt: "Tầm quan trọng của việc kiểm tra sức khỏe định kỳ trong phòng ngừa bệnh tật.",
-      readTime: "6 phút đọc",
-      date: "20/12/2025",
-    },
-    {
-      id: 4,
-      title: "Dinh Dưỡng Cân Bằng Cho Người Bận Rộn",
-      category: "Dinh dưỡng",
-      excerpt: "Mẹo và lời khuyên để duy trì chế độ ăn uống lành mạnh ngay cả khi bạn bận rộn.",
-      readTime: "7 phút đọc",
-      date: "18/12/2025",
-    },
-    {
-      id: 5,
-      title: "Tầm Quan Trọng Của Giấc Ngủ Đối Với Sức Khỏe",
-      category: "Sức khỏe tổng quát",
-      excerpt: "Giấc ngủ chất lượng ảnh hưởng như thế nào đến sức khỏe thể chất và tinh thần.",
-      readTime: "5 phút đọc",
-      date: "15/12/2025",
-    },
-    {
-      id: 6,
-      title: "Cách Phòng Ngừa Cảm Cúm Mùa Đông",
-      category: "Phòng bệnh",
-      excerpt: "Các biện pháp hiệu quả để phòng tránh cảm cúm và tăng cường hệ miễn dịch.",
-      readTime: "4 phút đọc",
-      date: "12/12/2025",
-    },
-  ]
+  const [activeCategory, setActiveCategory] = useState<string>(ARTICLE_DEFAULTS.ALL_CATEGORY_LABEL)
+  const categoryFilter =
+    activeCategory === ARTICLE_DEFAULTS.ALL_CATEGORY_LABEL ? undefined : activeCategory
 
-  const categories = ["Tất cả", "Tim mạch", "Nha khoa", "Sức khỏe tổng quát", "Dinh dưỡng", "Phòng bệnh"]
+  const categoriesQuery = useQuery({
+    queryKey: ARTICLE_QUERY_KEYS.CATEGORIES,
+    queryFn: getArticleCategories,
+  })
+
+  const articlesQuery = useQuery({
+    queryKey: ARTICLE_QUERY_KEYS.LIST({
+      category: categoryFilter,
+      page: 1,
+      limit: ARTICLE_DEFAULTS.PAGE_LIMIT,
+    }),
+    queryFn: () =>
+      getArticles({
+        category: categoryFilter,
+        page: 1,
+        limit: ARTICLE_DEFAULTS.PAGE_LIMIT,
+      }),
+  })
+
+  const categories = useMemo(
+    () => [ARTICLE_DEFAULTS.ALL_CATEGORY_LABEL, ...(categoriesQuery.data?.items ?? [])],
+    [categoriesQuery.data?.items],
+  )
+
+  const articles = articlesQuery.data?.items ?? []
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -74,7 +74,12 @@ export default function HealthGuidePage() {
           {/* Categories */}
           <div className="mb-8 flex flex-wrap gap-2">
             {categories.map((category) => (
-              <Badge key={category} variant="outline" className="cursor-pointer hover:bg-primary hover:text-white">
+              <Badge
+                key={category}
+                variant={activeCategory === category ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setActiveCategory(category)}
+              >
                 {category}
               </Badge>
             ))}
@@ -82,37 +87,57 @@ export default function HealthGuidePage() {
 
           {/* Articles Grid */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {articles.map((article) => (
-              <Link key={article.id} href={`/health-guide/${article.id}`}>
-                <Card className="h-full transition-shadow hover:shadow-lg">
-                  <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
-                    <Image
-                      src={`/abstract-healthcare.png?height=200&width=400&query=healthcare ${article.category}`}
-                      alt={article.title}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
+            {articlesQuery.isLoading
+              ? healthGuideSkeletonIds.map((skeletonId) => (
+                <Card key={skeletonId} className="h-full overflow-hidden">
+                  <div className="h-48 animate-pulse bg-muted" />
                   <CardHeader>
-                    <Badge variant="secondary" className="mb-2 w-fit">
-                      {article.category}
-                    </Badge>
-                    <CardTitle className="line-clamp-2">{article.title}</CardTitle>
-                    <CardDescription className="line-clamp-2">{article.excerpt}</CardDescription>
+                    <div className="mb-2 h-5 w-24 animate-pulse rounded bg-muted" />
+                    <div className="h-6 w-full animate-pulse rounded bg-muted" />
+                    <div className="h-4 w-4/5 animate-pulse rounded bg-muted" />
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        <span>{article.readTime}</span>
-                      </div>
-                      <span>{article.date}</span>
-                    </div>
+                    <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
                   </CardContent>
                 </Card>
-              </Link>
-            ))}
+              ))
+              : articles.map((article) => (
+                <Link key={article.id} href={`${ROUTES.HEALTH_GUIDE}/${article.slug}`}>
+                  <Card className="h-full transition-shadow hover:shadow-lg">
+                    <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+                      <Image
+                        src={article.image || `/abstract-healthcare.png?height=200&width=400&query=healthcare ${article.category}`}
+                        alt={article.title}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                    <CardHeader>
+                      <Badge variant="secondary" className="mb-2 w-fit">
+                        {article.category}
+                      </Badge>
+                      <CardTitle className="line-clamp-2">{article.title}</CardTitle>
+                      <CardDescription className="line-clamp-2">{article.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-4 w-4" />
+                          <span>{article.readTime}</span>
+                        </div>
+                        <span>{formatPublishedDate(article.publishedAt)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
           </div>
+
+          {!articlesQuery.isLoading && articles.length === 0 ? (
+            <p className="mt-8 text-sm text-muted-foreground">
+              Chưa có bài viết nào trong chuyên mục này.
+            </p>
+          ) : null}
         </div>
       </main>
 

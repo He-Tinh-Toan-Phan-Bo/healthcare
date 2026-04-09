@@ -10,7 +10,6 @@ enum UserRole {
   PATIENT
   DOCTOR
   ADMIN
-  SUPER_ADMIN
 }
 
 
@@ -142,5 +141,22 @@ model Booking {
   @@index([userId, createdAt])
   @@index([clinicId, bookingDate])
   @@index([status])
+}
+
+model Article {
+  id          String   @id @default(uuid())
+  title       String
+  slug        String   @unique
+  description String   @db.Text
+  image       String?  @db.Text
+  category    String   @default("Cẩm nang")
+  readTime    String   @default("5 phút") @map("read_time")
+  publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("articles")
+  @@index([publishedAt])
+  @@index([category])
 }
 

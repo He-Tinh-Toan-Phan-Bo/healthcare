@@ -1,4 +1,4 @@
-import type { Clinic, HealthPackage, Service, Article } from "@/types"
+import type { Clinic, HealthPackage, Service } from "@/shared/types"
 
 // Mock data - sẽ thay thế bằng API calls sau này
 export const MOCK_SERVICES: Service[] = [
@@ -127,35 +127,3 @@ export const MOCK_CLINICS: Clinic[] = [
     },
 ]
 
-export const MOCK_ARTICLES: Article[] = [
-    {
-        id: "1",
-        title: "10 Thực Phẩm Tốt Cho Sức Khỏe",
-        description: "Khám phá những thực phẩm giàu dinh dưỡng giúp tăng cường sức khỏe tổng thể",
-        image: "/healthy-eating-fruits-vegetables.jpg",
-        category: "Dinh Dưỡng",
-        readTime: "5 phút đọc",
-        publishedAt: "2 ngày trước",
-        slug: "10-thuc-pham-tot-cho-suc-khoe",
-    },
-    {
-        id: "2",
-        title: "Lợi Ích Của Việc Tập Thể Dục Đều Đặn",
-        description: "Tìm hiểu cách vận động đều đặn cải thiện sức khỏe thể chất và tinh thần",
-        image: "/person-exercising-fitness.jpg",
-        category: "Thể Dục",
-        readTime: "7 phút đọc",
-        publishedAt: "5 ngày trước",
-        slug: "loi-ich-cua-viec-tap-the-duc-deu-dan",
-    },
-    {
-        id: "3",
-        title: "Quản Lý Căng Thẳng Hiệu Quả",
-        description: "Các kỹ thuật đơn giản để giảm căng thẳng và cải thiện sức khỏe tinh thần",
-        image: "/mental-health-meditation-relaxation.jpg",
-        category: "Sức Khỏe Tinh Thần",
-        readTime: "6 phút đọc",
-        publishedAt: "1 tuần trước",
-        slug: "quan-ly-cang-thang-hieu-qua",
-    },
-]

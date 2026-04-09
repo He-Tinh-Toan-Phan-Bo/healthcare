@@ -5,9 +5,14 @@ import { Button } from "@/shared/ui/button"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { useLanguage } from "@/shared/provider/LanguageProvider"
 import { Logo } from "@/components/Logo"
+import { useAuthStore } from "@/store"
 
 export function Header() {
   const { t } = useLanguage()
+  const auth = useAuthStore()
+  const rawRole = String(auth.user?.role || "").toUpperCase()
+  const role = rawRole === "SUPER_ADMIN" ? "ADMIN" : rawRole
+  const canAccessAdmin = role === "ADMIN" || role === "DOCTOR"
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white shadow-md">
@@ -39,11 +44,26 @@ export function Header() {
 
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
-          <Link href="/login">
-            <Button variant="ghost" size="sm">
-              {t("Đăng Nhập", "Login")}
-            </Button>
-          </Link>
+          {auth.isAuthenticated ? (
+            <Link href="/account">
+              <Button variant="ghost" size="sm">
+                {t("Tài Khoản", "Account")}
+              </Button>
+            </Link>
+          ) : (
+            <Link href="/login">
+              <Button variant="ghost" size="sm">
+                {t("Đăng Nhập", "Login")}
+              </Button>
+            </Link>
+          )}
+          {canAccessAdmin ? (
+            <Link href="/admin">
+              <Button variant="outline" size="sm">
+                Admin
+              </Button>
+            </Link>
+          ) : null}
           <Link href="/booking">
             <Button size="sm" className="bg-primary text-white hover:bg-primary/90">
               {t("Đặt Lịch Khám", "Book Appointment")}

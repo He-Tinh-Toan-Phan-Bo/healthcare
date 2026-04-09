@@ -79,7 +79,7 @@ export interface User {
     email: string
     phone?: string
     avatar?: string
-    role: "patient" | "doctor" | "admin"
+    role: "patient" | "doctor" | "admin" | "PATIENT" | "DOCTOR" | "ADMIN" | "SUPER_ADMIN"
 }
 
 export interface ApiResponse<T> {
