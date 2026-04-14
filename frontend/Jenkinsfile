@@ -1,0 +1,193 @@
+pipeline {
+    agent any
+
+    environment {
+        // ─── Registry ────────────────────────────────────────────────────────────
+        GITEA_REGISTRY  = "gitea.kltn.internal:80"
+        GITEA_OWNER     = "kltn"
+        IMAGE_NAME      = "healthcare-frontend"
+        GITEA_CREDS_ID  = "gitea-token-admin"
+
+        // ─── SonarQube ───────────────────────────────────────────────────────────
+        SONAR_SERVER    = "sonar-server"
+        SONAR_SCANNER   = "sonar-scanner"
+
+        // ─── Derived image tag (build number) ────────────────────────────────────
+        IMAGE_TAG       = "${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}:${BUILD_NUMBER}"
+    }
+
+    options {
+        timestamps()                        // Prepend timestamps to every log line
+        disableConcurrentBuilds()           // Prevent race conditions on shared runners
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+
+        // ── 0. System snapshot (useful for debugging runner capacity) ─────────────
+        stage('System Information') {
+            steps {
+                sh '''
+                    echo "=== CPU ===" && lscpu | grep -E "Model|Socket|Core|Thread" || true
+                    echo "=== RAM ===" && free -mh
+                    echo "=== Disk ===" && df -h
+                    echo "=== Docker ===" && docker version --format "Client: {{.Client.Version}}  Server: {{.Server.Version}}"
+                '''
+            }
+        }
+
+        // ── 1. Checkout ───────────────────────────────────────────────────────────
+        stage('Step 1: Checkout') {
+            steps {
+                checkout scm
+                echo "Branch: ${env.BRANCH_NAME ?: 'N/A'} | Commit: ${env.GIT_COMMIT?.take(8) ?: 'N/A'}"
+            }
+        }
+
+        // ── 2. Security & Analysis (Parallel) ────────────────────────────────────
+        stage('Step 2: Security & Analysis') {
+            parallel {
+
+                stage('SonarQube Scan') {
+                    steps {
+                        script {
+                            def scannerHome = tool SONAR_SCANNER
+                            withSonarQubeEnv(SONAR_SERVER) {
+                                sh """
+                                    ${scannerHome}/bin/sonar-scanner \
+                                        -Dsonar.projectKey=${env.JOB_BASE_NAME} \
+                                        -Dsonar.sources=.
+                                """
+                            }
+                        }
+                    }
+                }
+
+                stage('Hadolint – Dockerfile Lint') {
+                    steps {
+                        script {
+                            // [ALLOW FAILURE] exit-code 0 so pipeline continues.
+                            // TODO: Set --failure-threshold error (or remove || true) once
+                            //       all Dockerfile warnings have been resolved.
+                            sh '''
+                                docker run --rm -i hadolint/hadolint:v2.14.0 hadolint \
+                                    --failure-threshold style \
+                                    - < ./frontend/Dockerfile || true
+                            '''
+                        }
+                    }
+                }
+
+                stage('Trivy – Source Scan') {
+                    steps {
+                        script {
+                            // [ALLOW FAILURE] --exit-code 0 keeps the build green while
+                            // the team works through existing HIGH/CRITICAL findings.
+                            // TODO: Change --exit-code to 1 to enforce hard-fail once
+                            //       dependency vulnerabilities are remediated.
+                            sh """
+                                docker run --rm \
+                                    -v /var/run/docker.sock:/var/run/docker.sock \
+                                    -v \${HOME}/.cache/trivy:/root/.cache/trivy \
+                                    aquasec/trivy:0.69.3 fs \
+                                        --scanners vuln,secret \
+                                        --severity HIGH,CRITICAL \
+                                        --exit-code 0 \
+                                        --no-progress \
+                                        .
+                            """
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── 3. Quality Gate (SonarQube webhook) ───────────────────────────────────
+        stage('Step 3: Quality Gate') {
+            steps {
+                // [ALLOW FAILURE] abortPipeline:false keeps the build green while
+                // the team tunes SonarQube quality profiles.
+                // TODO: Set abortPipeline:true once the project consistently passes.
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+
+        // ── 4. Build Docker Image ─────────────────────────────────────────────────
+        stage('Step 4: Build Image') {
+            steps {
+                script {
+                    echo "Building image: ${IMAGE_TAG}"
+                    sh "docker build -t ${IMAGE_TAG} ./frontend"
+                }
+            }
+        }
+
+        // ── 5. Trivy – Image Scan ─────────────────────────────────────────────────
+        stage('Step 5: Trivy – Image Scan') {
+            steps {
+                script {
+                    // [ALLOW FAILURE] --exit-code 0 lets the pipeline proceed to push
+                    // while the team remediates image-level vulnerabilities.
+                    // TODO: Change --exit-code to 1 to block pushes on HIGH/CRITICAL.
+                    sh """
+                        docker run --rm \
+                            -v /var/run/docker.sock:/var/run/docker.sock \
+                            -v \${HOME}/.cache/trivy:/root/.cache/trivy \
+                            aquasec/trivy:0.69.3 image \
+                                --severity HIGH,CRITICAL \
+                                --exit-code 0 \
+                                --no-progress \
+                                ${IMAGE_TAG}
+                    """
+                }
+            }
+        }
+
+        // ── 6. Push to Gitea Registry ─────────────────────────────────────────────
+        stage('Step 6: Push to Gitea Registry') {
+            steps {
+                script {
+                    withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
+                        sh """
+                            echo "\$TOKEN" | docker login ${GITEA_REGISTRY} \
+                                --username admin --password-stdin
+                            docker push ${IMAGE_TAG}
+                            echo "✓ Pushed: ${IMAGE_TAG}"
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    // ── Post-build Cleanup ────────────────────────────────────────────────────────
+    post {
+        always {
+            script {
+                echo "=== Post-build Cleanup ==="
+
+                sh "docker logout ${GITEA_REGISTRY} || true"
+
+                // Remove only the image built in this run to avoid wiping cached layers
+                // needed by other pipelines on the same runner.
+                sh "docker rmi -f ${IMAGE_TAG} || true"
+
+                // Prune dangling images & build cache (safe; does not remove named images)
+                sh "docker image prune -f || true"
+                sh "docker builder prune -f || true"
+
+                cleanWs()
+            }
+        }
+
+        success {
+            echo "✅ Pipeline PASSED — image pushed: ${IMAGE_TAG}"
+        }
+
+        failure {
+            echo "❌ Pipeline FAILED — review stage logs above for details."
+        }
+    }
+}
