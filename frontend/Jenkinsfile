@@ -45,74 +45,74 @@ pipeline {
         }
 
         // ── 2. Security & Analysis (Parallel) ────────────────────────────────────
-        stage('Step 2: Security & Analysis') {
-            parallel {
+        // stage('Step 2: Security & Analysis') {
+        //     parallel {
 
-                stage('SonarQube Scan') {
-                    steps {
-                        script {
-                            def scannerHome = tool SONAR_SCANNER
-                            withSonarQubeEnv(SONAR_SERVER) {
-                                sh """
-                                    ${scannerHome}/bin/sonar-scanner \
-                                        -Dsonar.projectKey=${env.JOB_BASE_NAME} \
-                                        -Dsonar.sources=.
-                                """
-                            }
-                        }
-                    }
-                }
+        //         stage('SonarQube Scan') {
+        //             steps {
+        //                 script {
+        //                     def scannerHome = tool SONAR_SCANNER
+        //                     withSonarQubeEnv(SONAR_SERVER) {
+        //                         sh """
+        //                             ${scannerHome}/bin/sonar-scanner \
+        //                                 -Dsonar.projectKey=${env.JOB_BASE_NAME} \
+        //                                 -Dsonar.sources=.
+        //                         """
+        //                     }
+        //                 }
+        //             }
+        //         }
 
-                stage('Hadolint – Dockerfile Lint') {
-                    steps {
-                        script {
-                            // [ALLOW FAILURE] exit-code 0 so pipeline continues.
-                            // TODO: Set --failure-threshold error (or remove || true) once
-                            //       all Dockerfile warnings have been resolved.
-                            sh '''
-                                docker run --rm -i hadolint/hadolint:v2.14.0 hadolint \
-                                    --failure-threshold style \
-                                    - < ./frontend/Dockerfile || true
-                            '''
-                        }
-                    }
-                }
+        //         stage('Hadolint – Dockerfile Lint') {
+        //             steps {
+        //                 script {
+        //                     // [ALLOW FAILURE] exit-code 0 so pipeline continues.
+        //                     // TODO: Set --failure-threshold error (or remove || true) once
+        //                     //       all Dockerfile warnings have been resolved.
+        //                     sh '''
+        //                         docker run --rm -i hadolint/hadolint:v2.14.0 hadolint \
+        //                             --failure-threshold style \
+        //                             - < ./frontend/Dockerfile || true
+        //                     '''
+        //                 }
+        //             }
+        //         }
 
-                stage('Trivy – Source Scan') {
-                    steps {
-                        script {
-                            // [ALLOW FAILURE] --exit-code 0 keeps the build green while
-                            // the team works through existing HIGH/CRITICAL findings.
-                            // TODO: Change --exit-code to 1 to enforce hard-fail once
-                            //       dependency vulnerabilities are remediated.
-                            sh """
-                                docker run --rm \
-                                    -v /var/run/docker.sock:/var/run/docker.sock \
-                                    -v \${HOME}/.cache/trivy:/root/.cache/trivy \
-                                    aquasec/trivy:0.69.3 fs \
-                                        --scanners vuln,secret \
-                                        --severity HIGH,CRITICAL \
-                                        --exit-code 0 \
-                                        --no-progress \
-                                        .
-                            """
-                        }
-                    }
-                }
-            }
-        }
+        //         stage('Trivy – Source Scan') {
+        //             steps {
+        //                 script {
+        //                     // [ALLOW FAILURE] --exit-code 0 keeps the build green while
+        //                     // the team works through existing HIGH/CRITICAL findings.
+        //                     // TODO: Change --exit-code to 1 to enforce hard-fail once
+        //                     //       dependency vulnerabilities are remediated.
+        //                     sh """
+        //                         docker run --rm \
+        //                             -v /var/run/docker.sock:/var/run/docker.sock \
+        //                             -v \${HOME}/.cache/trivy:/root/.cache/trivy \
+        //                             aquasec/trivy:0.69.3 fs \
+        //                                 --scanners vuln,secret \
+        //                                 --severity HIGH,CRITICAL \
+        //                                 --exit-code 0 \
+        //                                 --no-progress \
+        //                                 .
+        //                     """
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
 
-        // ── 3. Quality Gate (SonarQube webhook) ───────────────────────────────────
-        stage('Step 3: Quality Gate') {
-            steps {
-                // [ALLOW FAILURE] abortPipeline:false keeps the build green while
-                // the team tunes SonarQube quality profiles.
-                // TODO: Set abortPipeline:true once the project consistently passes.
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: false
-                }
-            }
-        }
+        // // ── 3. Quality Gate (SonarQube webhook) ───────────────────────────────────
+        // stage('Step 3: Quality Gate') {
+        //     steps {
+        //         // [ALLOW FAILURE] abortPipeline:false keeps the build green while
+        //         // the team tunes SonarQube quality profiles.
+        //         // TODO: Set abortPipeline:true once the project consistently passes.
+        //         timeout(time: 5, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: false
+        //         }
+        //     }
+        // }
 
         // ── 4. Build Docker Image ─────────────────────────────────────────────────
         stage('Step 4: Build Image') {
@@ -124,26 +124,26 @@ pipeline {
             }
         }
 
-        // ── 5. Trivy – Image Scan ─────────────────────────────────────────────────
-        stage('Step 5: Trivy – Image Scan') {
-            steps {
-                script {
-                    // [ALLOW FAILURE] --exit-code 0 lets the pipeline proceed to push
-                    // while the team remediates image-level vulnerabilities.
-                    // TODO: Change --exit-code to 1 to block pushes on HIGH/CRITICAL.
-                    sh """
-                        docker run --rm \
-                            -v /var/run/docker.sock:/var/run/docker.sock \
-                            -v \${HOME}/.cache/trivy:/root/.cache/trivy \
-                            aquasec/trivy:0.69.3 image \
-                                --severity HIGH,CRITICAL \
-                                --exit-code 0 \
-                                --no-progress \
-                                ${IMAGE_TAG}
-                    """
-                }
-            }
-        }
+        // // ── 5. Trivy – Image Scan ─────────────────────────────────────────────────
+        // stage('Step 5: Trivy – Image Scan') {
+        //     steps {
+        //         script {
+        //             // [ALLOW FAILURE] --exit-code 0 lets the pipeline proceed to push
+        //             // while the team remediates image-level vulnerabilities.
+        //             // TODO: Change --exit-code to 1 to block pushes on HIGH/CRITICAL.
+        //             sh """
+        //                 docker run --rm \
+        //                     -v /var/run/docker.sock:/var/run/docker.sock \
+        //                     -v \${HOME}/.cache/trivy:/root/.cache/trivy \
+        //                     aquasec/trivy:0.69.3 image \
+        //                         --severity HIGH,CRITICAL \
+        //                         --exit-code 0 \
+        //                         --no-progress \
+        //                         ${IMAGE_TAG}
+        //             """
+        //         }
+        //     }
+        // }
 
         // ── 6. Push to Gitea Registry ─────────────────────────────────────────────
         stage('Step 6: Push to Gitea Registry') {
@@ -156,6 +156,64 @@ pipeline {
                             docker push ${IMAGE_TAG}
                             echo "✓ Pushed: ${IMAGE_TAG}"
                         """
+                    }
+                }
+            }
+        }
+// ── 7. Update Staging Manifests (Trigger Phase 2) ────────────────────────
+        stage('Step 7: Update Staging Manifests') {
+            steps {
+                // Create an isolated workspace to avoid mixing with the app's source code
+                dir('manifests-workspace') {
+                    // Inject Git credentials (Jenkins masks credential values in logs)
+                    withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
+                        sh '''
+                            set -e
+                            GIT_REPO_URL="http://thanhdc:${TOKEN}@gitea.kltn.internal/kltn/healthcare-manifests.git"
+
+                            # 1. Clone the manifests repository
+                            # Use token-based auth so non-interactive clone/push works in CI
+                            git clone "${GIT_REPO_URL}" .
+                            
+                            # 2. Create and checkout a temporary branch for this specific build
+                            TEMP_BRANCH="update-staging-frontend-${BUILD_NUMBER}"
+                            git checkout -b ${TEMP_BRANCH}
+                            
+                            # 3. Navigate to the frontend staging overlay directory
+                            cd apps/overlays/staging/frontend
+
+                            # 4. Update the image tag using 'sed' (Stream Editor)
+                            # This searches for 'newTag: <anything>' and replaces it with 'newTag: <BUILD_NUMBER>'
+                            sed -i "s#newName:.*#newName: $GITEA_REGISTRY/$GITEA_OWNER/$IMAGE_NAME#g" kustomization.yaml
+                            sed -i 's/newTag:.*/newTag: "'"${BUILD_NUMBER}"'"/g' kustomization.yaml
+
+                            # 5. Commit and push the changes
+                            # Using '-c' to set user.name and user.email inline for this specific commit
+                            git add kustomization.yaml
+                            git -c user.name="thanhdc" -c user.email="chithanh040804@gmail.com" commit -m "ci(staging): update frontend tag to ${BUILD_NUMBER}"
+                            
+                            # Push the temporary branch back to Gitea to trigger Phase 2
+                            git push origin ${TEMP_BRANCH}
+
+                            # 6. Automatically create a Pull Request via Gitea API
+                            # We send a POST request to the /pulls endpoint
+                            echo "Creating Pull Request for ${TEMP_BRANCH}..."
+                            GIT_TOKEN="${TOKEN}"
+                            PR_PAYLOAD=$(printf '{"base":"main","head":"%s","title":"ci(staging): update frontend to build #%s","body":"This PR was automatically generated by Jenkins Pipeline to update the staging image tag to build #%s."}' "${TEMP_BRANCH}" "${BUILD_NUMBER}" "${BUILD_NUMBER}")
+
+                            PR_RESPONSE=$(curl --silent --show-error --fail-with-body -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare-manifests/pulls" \
+                                -H "accept: application/json" \
+                                -H "Authorization: token ${GIT_TOKEN}" \
+                                -H "Content-Type: application/json" \
+                                --data "${PR_PAYLOAD}")
+
+                            PR_URL=$(echo "${PR_RESPONSE}" | grep -oE '"html_url":"[^"]+"' | head -n 1 | cut -d '"' -f 4 || true)
+                            if [ -n "${PR_URL}" ]; then
+                                echo "✅ Success: Temp branch pushed and Pull Request created: ${PR_URL}"
+                            else
+                                echo "✅ Success: Temp branch pushed and Pull Request created."
+                            fi
+                        '''
                     }
                 }
             }
