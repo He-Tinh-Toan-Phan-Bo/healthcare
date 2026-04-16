@@ -1,24 +1,32 @@
-# Use the official Node.js image as the base image
-FROM node:18-alpine
+# Giai đoạn 1: Cài đặt dependencies
+FROM node:20-alpine AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+COPY package.json pnpm-lock.yaml ./
+RUN corepack enable && pnpm install --frozen-lockfile
 
-# Set the working directory inside the container
+# Giai đoạn 2: Build code
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN corepack enable && pnpm build
+
+# Giai đoạn 3: Chạy ứng dụng (Image cuối cùng)
+FROM node:20-alpine AS runner
 WORKDIR /app
 
-# Copy package.json and pnpm-lock.yaml to the working directory
-COPY package.json pnpm-lock.yaml ./
+ENV NODE_ENV=production
+# Next.js thu thập dữ liệu ẩn danh, tắt đi cho nhẹ
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install dependencies
-RUN npm install -g pnpm && pnpm install
+# Copy các file cần thiết từ bản build
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
 
-# Copy the rest of the application code
-COPY . .
-
-# Build the Next.js application
-# RUN pnpm build
-
-# Expose the port the app runs on
 EXPOSE 3000
+ENV PORT=3000
 
-# # Start the Next.js application
-# CMD ["pnpm", "start"]
-LABEL org.opencontainers.image.source="https://gitea.kltn.internal/kltn/healthcare"
+# Chạy trực tiếp bằng node để ổn định nhất trên K8s
+CMD ["node", "server.js"]
