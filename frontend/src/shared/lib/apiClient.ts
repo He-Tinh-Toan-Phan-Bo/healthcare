@@ -1,8 +1,13 @@
 import axios, { AxiosError } from 'axios'
 import { useAuthStore } from '@/store'
 
+let baseURL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080'
+if (baseURL.includes('127.0.0.1')) {
+  baseURL = baseURL.replace('127.0.0.1', 'localhost')
+}
+
 export const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
+  baseURL,
 })
 
 apiClient.interceptors.request.use((config) => {

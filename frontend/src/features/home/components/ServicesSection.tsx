@@ -2,7 +2,9 @@
 
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card"
 import { Stethoscope, Heart, TestTube, Syringe } from "lucide-react"
-import { MOCK_SERVICES } from "@/shared/constants/mockData"
+import { HOME_TEXTS } from "@/shared/constants/home"
+import { ROUTES } from "@/shared/constants"
+import Link from "next/link"
 
 const iconMap = {
     Stethoscope: Stethoscope,
@@ -13,6 +15,7 @@ const iconMap = {
 
 import { useEffect, useState } from "react"
 import { getSpecialties, type Specialty } from "@/api/specialties"
+import { useLanguage } from "@/shared/provider/LanguageProvider"
 
 import {
     Carousel,
@@ -23,6 +26,7 @@ import {
 } from "@/shared/ui/carousel"
 
 export function ServicesSection() {
+    const { t } = useLanguage()
     const [specialties, setSpecialties] = useState<Specialty[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -58,9 +62,9 @@ export function ServicesSection() {
         <section className="py-12 md:py-16 bg-slate-50/50">
             <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-8 text-center md:mb-12">
-                    <h2 className="mb-3 text-2xl font-bold text-balance sm:text-3xl md:mb-4">Chuyên Khoa Của Chúng Tôi</h2>
+                    <h2 className="mb-3 text-2xl font-bold text-balance sm:text-3xl md:mb-4">{t(HOME_TEXTS.SERVICES.TITLE.vi, HOME_TEXTS.SERVICES.TITLE.en)}</h2>
                     <p className="text-sm text-muted-foreground text-pretty sm:text-base">
-                        Khám và điều trị với các chuyên gia hàng đầu
+                        {t(HOME_TEXTS.SERVICES.DESC.vi, HOME_TEXTS.SERVICES.DESC.en)}
                     </p>
                 </div>
 
@@ -83,15 +87,17 @@ export function ServicesSection() {
 
                             return (
                                 <CarouselItem key={specialty.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
-                                    <Card className="group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full border-none shadow-sm">
-                                        <CardHeader>
-                                            <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-transform group-hover:scale-110 ${colors.split(' ')[0]} ${colors.split(' ')[1]}`}>
-                                                <Icon className="h-7 w-7" />
-                                            </div>
-                                            <CardTitle className="group-hover:text-primary transition-colors">{specialty.name}</CardTitle>
-                                            <CardDescription className="line-clamp-2">{specialty.description || "Chăm sóc sức khỏe chuyên sâu với đội ngũ bác sĩ giàu kinh nghiệm."}</CardDescription>
-                                        </CardHeader>
-                                    </Card>
+                                    <Link href={ROUTES.CLINICS} className="h-full block">
+                                        <Card className="group transition-all duration-300 hover:shadow-xl hover:-translate-y-1 h-full border-none shadow-sm">
+                                            <CardHeader>
+                                                <div className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl transition-transform group-hover:scale-110 ${colors.split(' ')[0]} ${colors.split(' ')[1]}`}>
+                                                    <Icon className="h-7 w-7" />
+                                                </div>
+                                                <CardTitle className="group-hover:text-primary transition-colors">{specialty.name}</CardTitle>
+                                                <CardDescription className="line-clamp-2">{specialty.description || t(HOME_TEXTS.SERVICES.DEFAULT_DESC.vi, HOME_TEXTS.SERVICES.DEFAULT_DESC.en)}</CardDescription>
+                                            </CardHeader>
+                                        </Card>
+                                    </Link>
                                 </CarouselItem>
                             )
                         })}

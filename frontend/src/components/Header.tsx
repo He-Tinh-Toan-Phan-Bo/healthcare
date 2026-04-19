@@ -6,6 +6,8 @@ import { LanguageSwitcher } from "@/components/LanguageSwitcher"
 import { useLanguage } from "@/shared/provider/LanguageProvider"
 import { Logo } from "@/components/Logo"
 import { useAuthStore } from "@/store"
+import { HOME_TEXTS } from "@/shared/constants/home"
+import { ROUTES } from "@/shared/constants"
 
 export function Header() {
   const { t } = useLanguage()
@@ -22,23 +24,23 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          <Link href="/clinics" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
-            {t("Phòng Khám", "Clinics")}
+          <Link href={ROUTES.CLINICS} className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+            {t(HOME_TEXTS.HEADER.CLINICS.vi, HOME_TEXTS.HEADER.CLINICS.en)}
           </Link>
           <Link
-            href="/#packages"
+            href={ROUTES.PACKAGES}
             className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
           >
-            {t("Gói Khám Sức Khỏe", "Health Packages")}
+            {t(HOME_TEXTS.HEADER.PACKAGES.vi, HOME_TEXTS.HEADER.PACKAGES.en)}
           </Link>
-          <Link href="/about" className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
-            {t("Về Chúng Tôi", "About Us")}
+          <Link href={ROUTES.DOCTORS} className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
+            {t(HOME_TEXTS.HEADER.DOCTORS.vi, HOME_TEXTS.HEADER.DOCTORS.en)}
           </Link>
           <Link
-            href="/health-guide"
+            href={ROUTES.HEALTH_GUIDE}
             className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
           >
-            {t("Cẩm Nang Sức Khỏe", "Health Guide")}
+            {t(HOME_TEXTS.HEADER.GUIDE.vi, HOME_TEXTS.HEADER.GUIDE.en)}
           </Link>
         </nav>
 
@@ -47,13 +49,13 @@ export function Header() {
           {auth.isAuthenticated ? (
             <Link href="/account">
               <Button variant="ghost" size="sm">
-                {t("Tài Khoản", "Account")}
+                {t(HOME_TEXTS.COMMON.ACCOUNT.vi, HOME_TEXTS.COMMON.ACCOUNT.en)}
               </Button>
             </Link>
           ) : (
             <Link href="/login">
               <Button variant="ghost" size="sm">
-                {t("Đăng Nhập", "Login")}
+                {t(HOME_TEXTS.COMMON.LOGIN.vi, HOME_TEXTS.COMMON.LOGIN.en)}
               </Button>
             </Link>
           )}
@@ -66,7 +68,7 @@ export function Header() {
           ) : null}
           <Link href="/booking">
             <Button size="sm" className="bg-primary text-white hover:bg-primary/90">
-              {t("Đặt Lịch Khám", "Book Appointment")}
+              {t(HOME_TEXTS.COMMON.BOOK_APPOINTMENT.vi, HOME_TEXTS.COMMON.BOOK_APPOINTMENT.en)}
             </Button>
           </Link>
         </div>

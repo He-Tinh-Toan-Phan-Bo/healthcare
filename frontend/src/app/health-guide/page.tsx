@@ -11,6 +11,8 @@ import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { getArticleCategories, getArticles } from "@/api/articles"
 import { ARTICLE_DEFAULTS, ARTICLE_QUERY_KEYS, ROUTES } from "@/shared/constants"
+import { useLanguage } from "@/shared/provider/LanguageProvider"
+import { HOME_TEXTS } from "@/shared/constants/home"
 
 const healthGuideSkeletonIds = [
   "health-guide-skeleton-1",
@@ -30,9 +32,12 @@ function formatPublishedDate(value: string) {
 }
 
 export default function HealthGuidePage() {
-  const [activeCategory, setActiveCategory] = useState<string>(ARTICLE_DEFAULTS.ALL_CATEGORY_LABEL)
+  const { t } = useLanguage()
+  const allCategoryLabel = t(HOME_TEXTS.PAGES.HEALTH_GUIDE.ALL_CATEGORY.vi, HOME_TEXTS.PAGES.HEALTH_GUIDE.ALL_CATEGORY.en)
+
+  const [activeCategory, setActiveCategory] = useState<string>("ALL")
   const categoryFilter =
-    activeCategory === ARTICLE_DEFAULTS.ALL_CATEGORY_LABEL ? undefined : activeCategory
+    activeCategory === "ALL" ? undefined : activeCategory
 
   const categoriesQuery = useQuery({
     queryKey: ARTICLE_QUERY_KEYS.CATEGORIES,
@@ -54,8 +59,8 @@ export default function HealthGuidePage() {
   })
 
   const categories = useMemo(
-    () => [ARTICLE_DEFAULTS.ALL_CATEGORY_LABEL, ...(categoriesQuery.data?.items ?? [])],
-    [categoriesQuery.data?.items],
+    () => [{ id: "ALL", name: allCategoryLabel }, ...(categoriesQuery.data?.items || []).map(c => ({ id: c, name: c }))],
+    [categoriesQuery.data?.items, allCategoryLabel],
   )
 
   const articles = articlesQuery.data?.items ?? []
@@ -67,20 +72,20 @@ export default function HealthGuidePage() {
       <main className="flex-1 py-12">
         <div className="container mx-auto px-4">
           <div className="mb-8">
-            <h1 className="mb-2 text-3xl font-bold">Cẩm Nang Sức Khỏe</h1>
-            <p className="text-muted-foreground">Kiến thức và lời khuyên hữu ích về chăm sóc sức khỏe</p>
+            <h1 className="mb-2 text-3xl font-bold">{t(HOME_TEXTS.ARTICLES.TITLE.vi, HOME_TEXTS.ARTICLES.TITLE.en)}</h1>
+            <p className="text-muted-foreground">{t(HOME_TEXTS.ARTICLES.DESC.vi, HOME_TEXTS.ARTICLES.DESC.en)}</p>
           </div>
 
           {/* Categories */}
           <div className="mb-8 flex flex-wrap gap-2">
             {categories.map((category) => (
               <Badge
-                key={category}
-                variant={activeCategory === category ? "default" : "outline"}
+                key={category.id}
+                variant={activeCategory === category.id ? "default" : "outline"}
                 className="cursor-pointer"
-                onClick={() => setActiveCategory(category)}
+                onClick={() => setActiveCategory(category.id)}
               >
-                {category}
+                {category.name}
               </Badge>
             ))}
           </div>
@@ -103,23 +108,23 @@ export default function HealthGuidePage() {
               ))
               : articles.map((article) => (
                 <Link key={article.id} href={`${ROUTES.HEALTH_GUIDE}/${article.slug}`}>
-                  <Card className="h-full transition-shadow hover:shadow-lg">
-                    <div className="relative h-48 w-full overflow-hidden rounded-t-lg">
+                  <Card className="h-full flex flex-col p-0 gap-0 overflow-hidden transition-shadow shadow-sm hover:shadow-lg group">
+                    <div className="relative h-48 w-full bg-muted overflow-hidden flex-none">
                       <Image
                         src={article.image || `/abstract-healthcare.png?height=200&width=400&query=healthcare ${article.category}`}
                         alt={article.title}
                         fill
-                        className="object-cover"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                       />
                     </div>
-                    <CardHeader>
+                    <CardHeader className="pt-5 pb-3 flex-1">
                       <Badge variant="secondary" className="mb-2 w-fit">
                         {article.category}
                       </Badge>
-                      <CardTitle className="line-clamp-2">{article.title}</CardTitle>
-                      <CardDescription className="line-clamp-2">{article.description}</CardDescription>
+                      <CardTitle className="line-clamp-2 leading-tight group-hover:text-primary transition-colors">{article.title}</CardTitle>
+                      <CardDescription className="line-clamp-2 mt-1">{article.description}</CardDescription>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="pb-5 pt-0 flex-none">
                       <div className="flex items-center justify-between text-sm text-muted-foreground">
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
@@ -135,7 +140,7 @@ export default function HealthGuidePage() {
 
           {!articlesQuery.isLoading && articles.length === 0 ? (
             <p className="mt-8 text-sm text-muted-foreground">
-              Chưa có bài viết nào trong chuyên mục này.
+              {t(HOME_TEXTS.PAGES.HEALTH_GUIDE.EMPTY.vi, HOME_TEXTS.PAGES.HEALTH_GUIDE.EMPTY.en)}
             </p>
           ) : null}
         </div>

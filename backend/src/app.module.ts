@@ -20,6 +20,7 @@ import { DoctorAdminModule } from './doctor-admin/doctor-admin.module';
 import { AdminModule } from './admin/admin.module';
 import { ArticlesModule } from './articles/articles.module';
 import { ReviewsModule } from './reviews/reviews.module';
+import { PackagesModule } from './packages/packages.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { ReviewsModule } from './reviews/reviews.module';
     DoctorAdminModule,
     AdminModule,
     ReviewsModule,
+    PackagesModule,
   ],
   controllers: [AppController],
   providers: [

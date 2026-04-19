@@ -10,6 +10,8 @@ import { Star, ArrowRight, User } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { ROUTES } from "@/shared/constants"
+import { HOME_TEXTS } from "@/shared/constants/home"
+import { useLanguage } from "@/shared/provider/LanguageProvider"
 
 import {
     Carousel,
@@ -20,6 +22,7 @@ import {
 } from "@/shared/ui/carousel"
 
 export function DoctorsSection() {
+    const { t } = useLanguage()
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -56,12 +59,12 @@ export function DoctorsSection() {
             <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between md:mb-12">
                     <div>
-                        <h2 className="mb-2 text-2xl font-bold sm:text-3xl font-heading">Bác Sĩ Ưu Tú</h2>
-                        <p className="text-sm text-muted-foreground sm:text-base">Đội ngũ chuyên gia giàu kinh nghiệm</p>
+                        <h2 className="mb-2 text-2xl font-bold sm:text-3xl font-heading">{t(HOME_TEXTS.DOCTORS.TITLE.vi, HOME_TEXTS.DOCTORS.TITLE.en)}</h2>
+                        <p className="text-sm text-muted-foreground sm:text-base">{t(HOME_TEXTS.DOCTORS.DESC.vi, HOME_TEXTS.DOCTORS.DESC.en)}</p>
                     </div>
-                    <Link href="/doctors" className="w-full sm:w-auto">
+                    <Link href={ROUTES.DOCTORS} className="w-full sm:w-auto">
                         <Button variant="outline" className="gap-2 border-primary/20 text-primary hover:bg-primary/5 transition-colors">
-                            Tìm Bác Sĩ
+                            {t(HOME_TEXTS.DOCTORS.VIEW_ALL.vi, HOME_TEXTS.DOCTORS.VIEW_ALL.en)}
                             <ArrowRight className="h-4 w-4" />
                         </Button>
                     </Link>
@@ -77,8 +80,8 @@ export function DoctorsSection() {
                     <CarouselContent className="-ml-4">
                         {doctors.map((doctor) => (
                             <CarouselItem key={doctor.id} className="pl-4 md:basis-1/2 lg:basis-1/3">
-                                <Card className="overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-xl group h-full">
-                                    <div className="relative aspect-square overflow-hidden bg-slate-100">
+                                <Card className="overflow-hidden border-none shadow-md transition-all duration-300 hover:shadow-xl group h-full flex flex-col p-0 gap-0">
+                                    <div className="relative aspect-square overflow-hidden bg-slate-100 flex-none">
                                         {doctor.image || doctor.avatar ? (
                                             <Image
                                                 src={doctor.image || doctor.avatar || ""}
@@ -97,7 +100,7 @@ export function DoctorsSection() {
                                             </Badge>
                                         </div>
                                     </div>
-                                    <CardHeader className="p-4 pb-2">
+                                    <CardHeader className="p-4 pt-5 pb-2 flex-1">
                                         <CardTitle className="text-lg font-bold group-hover:text-primary transition-colors">{doctor.name}</CardTitle>
                                         <div className="flex items-center gap-1 text-sm text-amber-500 font-medium">
                                             <Star className="h-4 w-4 fill-current" />
@@ -105,13 +108,13 @@ export function DoctorsSection() {
                                             <span className="text-muted-foreground ml-1">({doctor.reviewCount || 0}+ lượt khám)</span>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-4 pt-0 flex flex-col gap-3">
+                                    <CardContent className="p-4 pt-0 flex-none flex flex-col gap-3">
                                         <p className="text-sm text-muted-foreground line-clamp-1 italic">
-                                            {doctor.experience}+ năm kinh nghiệm
+                                            {doctor.experience}+ {t(HOME_TEXTS.DOCTORS.YEARS_EXP.vi, HOME_TEXTS.DOCTORS.YEARS_EXP.en)}
                                         </p>
                                         <Link href={ROUTES.BOOKING} className="w-full mt-auto">
                                             <Button variant="secondary" className="w-full group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm active:scale-95">
-                                                Đặt Lịch Khám
+                                                {t(HOME_TEXTS.DOCTORS.BOOK_NOW.vi, HOME_TEXTS.DOCTORS.BOOK_NOW.en)}
                                             </Button>
                                         </Link>
                                     </CardContent>
