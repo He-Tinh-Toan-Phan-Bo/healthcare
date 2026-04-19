@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
+import { ERROR_CODES } from '../common/constants/error-codes';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import * as bcrypt from 'bcrypt';
@@ -40,7 +41,7 @@ export class AuthService {
     });
     if (existing) {
       throw new ConflictException({
-        code: 'EMAIL_ALREADY_EXISTS',
+        code: ERROR_CODES.EMAIL_ALREADY_EXISTS,
         message: 'Email already exists',
       });
     }
@@ -57,7 +58,7 @@ export class AuthService {
         existingOtpTtl - (otpTtlSeconds - minResendCooldownSeconds);
       if (remainingCooldown > 0) {
         throw new BadRequestException({
-          code: 'OTP_RESEND_TOO_SOON',
+          code: ERROR_CODES.OTP_RESEND_TOO_SOON,
           message: `OTP was already sent. Please wait ${remainingCooldown} seconds before requesting again`,
         });
       }
@@ -92,7 +93,7 @@ export class AuthService {
     } catch (error) {
       await this.clearRegisterOtpCache(normalizedEmail);
       throw new InternalServerErrorException({
-        code: 'OTP_EMAIL_SERVICE_UNAVAILABLE',
+        code: ERROR_CODES.OTP_EMAIL_SERVICE_UNAVAILABLE,
         message: 'Email OTP service unavailable',
       });
     }
@@ -114,14 +115,14 @@ export class AuthService {
 
     if (!cachedOtp || cachedOtp !== otp) {
       throw new UnauthorizedException({
-        code: 'OTP_INVALID_OR_EXPIRED',
+        code: ERROR_CODES.OTP_INVALID_OR_EXPIRED,
         message: 'OTP is invalid or expired',
       });
     }
 
     if (!cachedPayload) {
       throw new UnauthorizedException({
-        code: 'OTP_PENDING_DATA_NOT_FOUND',
+        code: ERROR_CODES.OTP_PENDING_DATA_NOT_FOUND,
         message: 'Registration session is expired. Please request OTP again',
       });
     }
@@ -155,14 +156,14 @@ export class AuthService {
     });
     if (!user)
       throw new UnauthorizedException({
-        code: 'INVALID_CREDENTIALS',
+        code: ERROR_CODES.INVALID_CREDENTIALS,
         message: 'Invalid credentials',
       });
 
     const ok = await bcrypt.compare(dto.password, user.passwordHash);
     if (!ok)
       throw new UnauthorizedException({
-        code: 'INVALID_CREDENTIALS',
+        code: ERROR_CODES.INVALID_CREDENTIALS,
         message: 'Invalid credentials',
       });
 

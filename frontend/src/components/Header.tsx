@@ -3,14 +3,14 @@
 import Link from "next/link"
 import { Button } from "@/shared/ui/button"
 import { LanguageSwitcher } from "@/components/LanguageSwitcher"
-import { useLanguage } from "@/shared/provider/LanguageProvider"
+import { useTranslation } from "react-i18next"
 import { Logo } from "@/components/Logo"
 import { useAuthStore } from "@/store"
-import { HOME_TEXTS } from "@/shared/constants/home"
 import { ROUTES } from "@/shared/constants"
 
 export function Header() {
-  const { t } = useLanguage()
+  const { t } = useTranslation("nav")
+  const { t: tc } = useTranslation("common")
   const auth = useAuthStore()
   const rawRole = String(auth.user?.role || "").toUpperCase()
   const role = rawRole === "SUPER_ADMIN" ? "ADMIN" : rawRole
@@ -25,22 +25,22 @@ export function Header() {
 
         <nav className="hidden items-center gap-6 md:flex">
           <Link href={ROUTES.CLINICS} className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
-            {t(HOME_TEXTS.HEADER.CLINICS.vi, HOME_TEXTS.HEADER.CLINICS.en)}
+            {t("clinics")}
           </Link>
           <Link
             href={ROUTES.PACKAGES}
             className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
           >
-            {t(HOME_TEXTS.HEADER.PACKAGES.vi, HOME_TEXTS.HEADER.PACKAGES.en)}
+            {t("packages")}
           </Link>
           <Link href={ROUTES.DOCTORS} className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary">
-            {t(HOME_TEXTS.HEADER.DOCTORS.vi, HOME_TEXTS.HEADER.DOCTORS.en)}
+            {t("doctors")}
           </Link>
           <Link
             href={ROUTES.HEALTH_GUIDE}
             className="text-sm font-medium text-foreground/80 transition-colors hover:text-primary"
           >
-            {t(HOME_TEXTS.HEADER.GUIDE.vi, HOME_TEXTS.HEADER.GUIDE.en)}
+            {t("health_guide")}
           </Link>
         </nav>
 
@@ -49,13 +49,13 @@ export function Header() {
           {auth.isAuthenticated ? (
             <Link href="/account">
               <Button variant="ghost" size="sm">
-                {t(HOME_TEXTS.COMMON.ACCOUNT.vi, HOME_TEXTS.COMMON.ACCOUNT.en)}
+                {tc("account")}
               </Button>
             </Link>
           ) : (
             <Link href="/login">
               <Button variant="ghost" size="sm">
-                {t(HOME_TEXTS.COMMON.LOGIN.vi, HOME_TEXTS.COMMON.LOGIN.en)}
+                {tc("login")}
               </Button>
             </Link>
           )}
@@ -68,7 +68,7 @@ export function Header() {
           ) : null}
           <Link href="/booking">
             <Button size="sm" className="bg-primary text-white hover:bg-primary/90">
-              {t(HOME_TEXTS.COMMON.BOOK_APPOINTMENT.vi, HOME_TEXTS.COMMON.BOOK_APPOINTMENT.en)}
+              {tc("book_appointment")}
             </Button>
           </Link>
         </div>

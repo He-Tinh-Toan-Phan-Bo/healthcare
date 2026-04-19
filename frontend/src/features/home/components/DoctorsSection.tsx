@@ -10,8 +10,7 @@ import { Star, ArrowRight, User } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
 import { ROUTES } from "@/shared/constants"
-import { HOME_TEXTS } from "@/shared/constants/home"
-import { useLanguage } from "@/shared/provider/LanguageProvider"
+import { useTranslation } from "react-i18next"
 
 import {
     Carousel,
@@ -22,7 +21,8 @@ import {
 } from "@/shared/ui/carousel"
 
 export function DoctorsSection() {
-    const { t } = useLanguage()
+    const { t } = useTranslation("home")
+    const { t: td } = useTranslation("doctors")
     const [doctors, setDoctors] = useState<Doctor[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -59,12 +59,12 @@ export function DoctorsSection() {
             <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between md:mb-12">
                     <div>
-                        <h2 className="mb-2 text-2xl font-bold sm:text-3xl font-heading">{t(HOME_TEXTS.DOCTORS.TITLE.vi, HOME_TEXTS.DOCTORS.TITLE.en)}</h2>
-                        <p className="text-sm text-muted-foreground sm:text-base">{t(HOME_TEXTS.DOCTORS.DESC.vi, HOME_TEXTS.DOCTORS.DESC.en)}</p>
+                        <h2 className="mb-2 text-2xl font-bold sm:text-3xl font-heading">{t("doctors.title")}</h2>
+                        <p className="text-sm text-muted-foreground sm:text-base">{t("doctors.desc")}</p>
                     </div>
                     <Link href={ROUTES.DOCTORS} className="w-full sm:w-auto">
                         <Button variant="outline" className="gap-2 border-primary/20 text-primary hover:bg-primary/5 transition-colors">
-                            {t(HOME_TEXTS.DOCTORS.VIEW_ALL.vi, HOME_TEXTS.DOCTORS.VIEW_ALL.en)}
+                            {t("doctors.view_all")}
                             <ArrowRight className="h-4 w-4" />
                         </Button>
                     </Link>
@@ -96,7 +96,7 @@ export function DoctorsSection() {
                                         )}
                                         <div className="absolute top-3 right-3">
                                             <Badge className="bg-white/90 text-primary backdrop-blur-sm border-none shadow-sm">
-                                                {doctor.specialty?.name || "Bác sĩ"}
+                                                {doctor.specialty?.name || td("default_specialty")}
                                             </Badge>
                                         </div>
                                     </div>
@@ -105,16 +105,16 @@ export function DoctorsSection() {
                                         <div className="flex items-center gap-1 text-sm text-amber-500 font-medium">
                                             <Star className="h-4 w-4 fill-current" />
                                             <span>{doctor.rating || 5.0}</span>
-                                            <span className="text-muted-foreground ml-1">({doctor.reviewCount || 0}+ lượt khám)</span>
+                                            <span className="text-muted-foreground ml-1">({doctor.reviewCount || 0}+ {td("medical_visit_count")})</span>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-4 pt-0 flex-none flex flex-col gap-3">
                                         <p className="text-sm text-muted-foreground line-clamp-1 italic">
-                                            {doctor.experience}+ {t(HOME_TEXTS.DOCTORS.YEARS_EXP.vi, HOME_TEXTS.DOCTORS.YEARS_EXP.en)}
+                                            {doctor.experience}+ {td("years_exp")}
                                         </p>
                                         <Link href={ROUTES.BOOKING} className="w-full mt-auto">
                                             <Button variant="secondary" className="w-full group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm active:scale-95">
-                                                {t(HOME_TEXTS.DOCTORS.BOOK_NOW.vi, HOME_TEXTS.DOCTORS.BOOK_NOW.en)}
+                                                {td("book_now")}
                                             </Button>
                                         </Link>
                                     </CardContent>
@@ -133,4 +133,3 @@ export function DoctorsSection() {
         </section>
     )
 }
-

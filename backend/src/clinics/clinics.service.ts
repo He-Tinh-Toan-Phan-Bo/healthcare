@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ERROR_CODES } from '../common/constants/error-codes';
 import { QueryClinicsDto } from './dto/query-clinics.dto';
 
 @Injectable()
@@ -83,7 +84,7 @@ export class ClinicsService {
     });
     if (!clinic) {
       throw new NotFoundException({
-        code: 'CLINIC_NOT_FOUND',
+        code: ERROR_CODES.CLINIC_NOT_FOUND,
         message: 'Clinic not found',
       });
     }

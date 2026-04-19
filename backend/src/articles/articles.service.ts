@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ERROR_CODES } from '../common/constants/error-codes';
 import { QueryArticlesDto } from './dto/query-articles.dto';
 
 const publicArticleSelect = {
@@ -109,7 +110,7 @@ export class ArticlesService {
 
     if (!item) {
       throw new NotFoundException({
-        code: 'ARTICLE_NOT_FOUND',
+        code: ERROR_CODES.ARTICLE_NOT_FOUND,
         message: 'Article not found',
       });
     }

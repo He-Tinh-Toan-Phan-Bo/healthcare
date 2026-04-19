@@ -2,20 +2,11 @@
 
 import { Card, CardDescription, CardHeader, CardTitle } from "@/shared/ui/card"
 import { Stethoscope, Heart, TestTube, Syringe } from "lucide-react"
-import { HOME_TEXTS } from "@/shared/constants/home"
 import { ROUTES } from "@/shared/constants"
 import Link from "next/link"
-
-const iconMap = {
-    Stethoscope: Stethoscope,
-    Heart: Heart,
-    TestTube: TestTube,
-    Syringe: Syringe,
-}
-
 import { useEffect, useState } from "react"
 import { getSpecialties, type Specialty } from "@/api/specialties"
-import { useLanguage } from "@/shared/provider/LanguageProvider"
+import { useTranslation } from "react-i18next"
 
 import {
     Carousel,
@@ -26,7 +17,7 @@ import {
 } from "@/shared/ui/carousel"
 
 export function ServicesSection() {
-    const { t } = useLanguage()
+    const { t } = useTranslation("home")
     const [specialties, setSpecialties] = useState<Specialty[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -62,9 +53,9 @@ export function ServicesSection() {
         <section className="py-12 md:py-16 bg-slate-50/50">
             <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-8 text-center md:mb-12">
-                    <h2 className="mb-3 text-2xl font-bold text-balance sm:text-3xl md:mb-4">{t(HOME_TEXTS.SERVICES.TITLE.vi, HOME_TEXTS.SERVICES.TITLE.en)}</h2>
+                    <h2 className="mb-3 text-2xl font-bold text-balance sm:text-3xl md:mb-4">{t("services.title")}</h2>
                     <p className="text-sm text-muted-foreground text-pretty sm:text-base">
-                        {t(HOME_TEXTS.SERVICES.DESC.vi, HOME_TEXTS.SERVICES.DESC.en)}
+                        {t("services.desc")}
                     </p>
                 </div>
 
@@ -94,7 +85,7 @@ export function ServicesSection() {
                                                     <Icon className="h-7 w-7" />
                                                 </div>
                                                 <CardTitle className="group-hover:text-primary transition-colors">{specialty.name}</CardTitle>
-                                                <CardDescription className="line-clamp-2">{specialty.description || t(HOME_TEXTS.SERVICES.DEFAULT_DESC.vi, HOME_TEXTS.SERVICES.DEFAULT_DESC.en)}</CardDescription>
+                                                <CardDescription className="line-clamp-2">{specialty.description || t("services.default_desc")}</CardDescription>
                                             </CardHeader>
                                         </Card>
                                     </Link>
@@ -113,5 +104,3 @@ export function ServicesSection() {
         </section>
     )
 }
-
-

@@ -6,8 +6,7 @@ import { Badge } from "@/shared/ui/badge"
 import { Check, Star, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import { ROUTES } from "@/shared/constants"
-import { HOME_TEXTS } from "@/shared/constants/home"
-import { useLanguage } from "@/shared/provider/LanguageProvider"
+import { useTranslation } from "react-i18next"
 import { useQuery } from "@tanstack/react-query"
 import { packageService } from "@/features/clinics/services/packageService"
 import {
@@ -19,7 +18,8 @@ import {
 } from "@/shared/ui/carousel"
 
 export function PackagesSection() {
-    const { t } = useLanguage()
+    const { t } = useTranslation("home")
+    const { t: tp } = useTranslation("packages")
     const packagesQuery = useQuery({
         queryKey: ["packages", "all"],
         queryFn: () => packageService.getAll(),
@@ -36,14 +36,14 @@ export function PackagesSection() {
             <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between md:mb-12">
                     <div>
-                        <h2 className="mb-3 text-2xl font-bold text-balance sm:text-3xl md:mb-4">{t(HOME_TEXTS.PACKAGES.TITLE.vi, HOME_TEXTS.PACKAGES.TITLE.en)}</h2>
+                        <h2 className="mb-3 text-2xl font-bold text-balance sm:text-3xl md:mb-4">{t("packages.title")}</h2>
                         <p className="text-sm text-muted-foreground text-pretty sm:text-base">
-                            {t(HOME_TEXTS.PACKAGES.DESC.vi, HOME_TEXTS.PACKAGES.DESC.en)}
+                            {t("packages.desc")}
                         </p>
                     </div>
                     <Link href={ROUTES.PACKAGES}>
                         <Button variant="outline" className="gap-2 bg-transparent border-primary/20 text-primary hover:bg-primary/5 transition-colors">
-                            {t(HOME_TEXTS.PACKAGES.VIEW_ALL.vi, HOME_TEXTS.PACKAGES.VIEW_ALL.en)}
+                            {t("packages.view_all")}
                             <ArrowRight className="h-4 w-4" />
                         </Button>
                     </Link>
@@ -69,7 +69,7 @@ export function PackagesSection() {
                                             {pkg.isPopular && (
                                                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                                                     <Badge className="bg-primary text-white shadow-sm">
-                                                        <Star className="mr-1 h-3 w-3" /> {t(HOME_TEXTS.PACKAGES.POPULAR_BADGE.vi, HOME_TEXTS.PACKAGES.POPULAR_BADGE.en)}
+                                                        <Star className="mr-1 h-3 w-3" /> {tp("popular_badge")}
                                                     </Badge>
                                                 </div>
                                             )}
@@ -78,7 +78,7 @@ export function PackagesSection() {
                                         </CardHeader>
                                         <CardContent className="space-y-4 flex-1 pt-6 px-6">
                                             <div className="text-3xl font-bold text-primary">
-                                                {formatPrice(pkg.price)} <span className="text-sm font-normal text-muted-foreground">{t(HOME_TEXTS.PACKAGES.PER_PERSON.vi, HOME_TEXTS.PACKAGES.PER_PERSON.en)}</span>
+                                                {formatPrice(pkg.price)} <span className="text-sm font-normal text-muted-foreground">{tp("per_person")}</span>
                                             </div>
 
                                             <ul className="space-y-3">
@@ -90,7 +90,7 @@ export function PackagesSection() {
                                                 ))}
                                                 {pkg.features.length > 4 && (
                                                     <li className="text-sm text-primary font-medium pl-6">
-                                                        + {pkg.features.length - 4} tiện ích khác
+                                                        + {pkg.features.length - 4} {tp("others_count")}
                                                     </li>
                                                 )}
                                             </ul>
@@ -98,7 +98,7 @@ export function PackagesSection() {
                                         <CardFooter className="mt-auto pt-4 pb-6 px-6">
                                             <Link href={ROUTES.BOOKING} className="w-full">
                                                 <Button variant={pkg.isPopular ? "default" : "outline"} className={`w-full group-hover:shadow-md transition-all ${!pkg.isPopular && 'border-primary/20 text-primary hover:bg-primary hover:text-white'}`}>
-                                                    {t(HOME_TEXTS.PACKAGES.BOOK_NOW.vi, HOME_TEXTS.PACKAGES.BOOK_NOW.en)}
+                                                    {tp("book_now")}
                                                 </Button>
                                             </Link>
                                         </CardFooter>
@@ -108,7 +108,7 @@ export function PackagesSection() {
                         </CarouselContent>
                     ) : (
                         <p className="mt-4 text-sm text-center text-muted-foreground w-full">
-                            {t(HOME_TEXTS.PACKAGES.EMPTY.vi, HOME_TEXTS.PACKAGES.EMPTY.en)}
+                            {t("packages.empty")}
                         </p>
                     )}
                     {packages.length > 3 && (

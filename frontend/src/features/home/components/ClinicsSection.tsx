@@ -6,15 +6,11 @@ import { Badge } from "@/shared/ui/badge"
 import { Star, MapPin, Clock, ArrowRight } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { MOCK_CLINICS } from "@/shared/constants/mockData"
 import { ROUTES } from "@/shared/constants"
-import { HOME_TEXTS } from "@/shared/constants/home"
-
+import { useTranslation } from "react-i18next"
 import { useEffect, useState } from "react"
 import { getClinics } from "@/api/clinics"
 import type { Clinic } from "@/shared/types"
-import { useLanguage } from "@/shared/provider/LanguageProvider"
-
 import {
     Carousel,
     CarouselContent,
@@ -24,7 +20,8 @@ import {
 } from "@/shared/ui/carousel"
 
 export function ClinicsSection() {
-    const { t } = useLanguage()
+    const { t } = useTranslation("home")
+    const { t: tc } = useTranslation("clinics")
     const [clinics, setClinics] = useState<Clinic[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
@@ -59,12 +56,12 @@ export function ClinicsSection() {
             <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between md:mb-12">
                     <div>
-                        <h2 className="mb-2 text-2xl font-bold sm:text-3xl">{t(HOME_TEXTS.CLINICS.TITLE.vi, HOME_TEXTS.CLINICS.TITLE.en)}</h2>
-                        <p className="text-sm text-muted-foreground sm:text-base">{t(HOME_TEXTS.CLINICS.DESC.vi, HOME_TEXTS.CLINICS.DESC.en)}</p>
+                        <h2 className="mb-2 text-2xl font-bold sm:text-3xl">{t("clinics.title")}</h2>
+                        <p className="text-sm text-muted-foreground sm:text-base">{t("clinics.desc")}</p>
                     </div>
                     <Link href={ROUTES.CLINICS} className="w-full sm:w-auto">
                         <Button variant="outline" className="gap-2 bg-transparent text-primary border-primary/20 hover:bg-primary/5 transition-colors">
-                            {t(HOME_TEXTS.CLINICS.VIEW_ALL.vi, HOME_TEXTS.CLINICS.VIEW_ALL.en)}
+                            {t("clinics.view_all")}
                             <ArrowRight className="h-4 w-4" />
                         </Button>
                     </Link>
@@ -98,13 +95,13 @@ export function ClinicsSection() {
                                                     variant="secondary"
                                                     className={clinic.isOpen ? "shrink-0 bg-success/10 text-success" : "shrink-0 bg-muted text-muted-foreground"}
                                                 >
-                                                    <span className="mr-1">●</span> {clinic.isOpen ? t(HOME_TEXTS.PAGES.CLINICS.STATUS_OPEN.vi, HOME_TEXTS.PAGES.CLINICS.STATUS_OPEN.en) : t(HOME_TEXTS.PAGES.CLINICS.STATUS_CLOSED.vi, HOME_TEXTS.PAGES.CLINICS.STATUS_CLOSED.en)}
+                                                    <span className="mr-1">●</span> {clinic.isOpen ? tc("status_open") : tc("status_closed")}
                                                 </Badge>
                                             </div>
                                             <div className="flex items-center gap-1 text-sm">
                                                 <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                                                 <span className="font-semibold">{clinic.rating}</span>
-                                                <span className="text-muted-foreground">({clinic.numReviews || 0} {t(HOME_TEXTS.PAGES.CLINICS.REVIEWS.vi, HOME_TEXTS.PAGES.CLINICS.REVIEWS.en)})</span>
+                                                <span className="text-muted-foreground">({clinic.numReviews || 0} {tc("reviews")})</span>
                                             </div>
                                         </CardHeader>
                                         <CardContent className="flex-1 space-y-2.5 pt-0 px-6">
@@ -118,14 +115,14 @@ export function ClinicsSection() {
                                             </div>
                                         </CardContent>
                                         <CardFooter className="flex-none pt-2 pb-6 px-6">
-                                            <Button className="w-full bg-primary hover:bg-primary/90 shadow-md transition-all active:scale-95">{t(HOME_TEXTS.PAGES.CLINICS.BOOK_NOW.vi, HOME_TEXTS.PAGES.CLINICS.BOOK_NOW.en)}</Button>
+                                            <Button className="w-full bg-primary hover:bg-primary/90 shadow-md transition-all active:scale-95">{tc("book_now")}</Button>
                                         </CardFooter>
                                     </Card>
                                 </Link>
                             </CarouselItem>
                         )) : (
                             <p className="mt-4 text-sm text-center text-muted-foreground w-full col-span-full py-8">
-                                {t(HOME_TEXTS.CLINICS.EMPTY.vi, HOME_TEXTS.CLINICS.EMPTY.en)}
+                                {t("clinics.empty")}
                             </p>
                         )}
                     </CarouselContent>

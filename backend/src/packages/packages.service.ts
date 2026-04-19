@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { ERROR_CODES } from '../common/constants/error-codes';
 
 @Injectable()
 export class PackagesService {
@@ -17,7 +18,10 @@ export class PackagesService {
       where: { id },
     });
     if (!healthPackage) {
-      throw new NotFoundException(`Health package with ID ${id} not found`);
+      throw new NotFoundException({
+        code: ERROR_CODES.PACKAGE_NOT_FOUND,
+        message: `Health package with ID ${id} not found`,
+      });
     }
     return healthPackage;
   }

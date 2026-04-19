@@ -9,8 +9,7 @@ import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import { getFeaturedArticles } from "@/api/articles"
 import { ARTICLE_DEFAULTS, ARTICLE_QUERY_KEYS, ROUTES } from "@/shared/constants"
-import { HOME_TEXTS } from "@/shared/constants/home"
-import { useLanguage } from "@/shared/provider/LanguageProvider"
+import { useTranslation } from "react-i18next"
 import {
     Carousel,
     CarouselContent,
@@ -30,7 +29,7 @@ function formatPublishedDate(value: string) {
 }
 
 export function HealthGuideSection() {
-    const { t } = useLanguage()
+    const { t } = useTranslation("home")
     const featuredArticlesQuery = useQuery({
         queryKey: ARTICLE_QUERY_KEYS.FEATURED(ARTICLE_DEFAULTS.HOME_LIMIT),
         queryFn: () => getFeaturedArticles(ARTICLE_DEFAULTS.HOME_LIMIT),
@@ -43,14 +42,14 @@ export function HealthGuideSection() {
             <div className="container mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between md:mb-12">
                     <div>
-                        <h2 className="mb-3 text-2xl font-bold text-balance sm:text-3xl md:mb-4">{t(HOME_TEXTS.ARTICLES.TITLE.vi, HOME_TEXTS.ARTICLES.TITLE.en)}</h2>
+                        <h2 className="mb-3 text-2xl font-bold text-balance sm:text-3xl md:mb-4">{t("articles.title")}</h2>
                         <p className="text-sm text-muted-foreground text-pretty sm:text-base">
-                            {t(HOME_TEXTS.ARTICLES.DESC.vi, HOME_TEXTS.ARTICLES.DESC.en)}
+                            {t("articles.desc")}
                         </p>
                     </div>
                     <Link href={ROUTES.HEALTH_GUIDE}>
                         <Button variant="outline" className="gap-2 bg-transparent border-primary/20 text-primary hover:bg-primary/5 transition-colors">
-                            {t(HOME_TEXTS.ARTICLES.VIEW_ALL.vi, HOME_TEXTS.ARTICLES.VIEW_ALL.en)}
+                            {t("articles.view_all")}
                             <ArrowRight className="h-4 w-4" />
                         </Button>
                     </Link>
@@ -86,7 +85,7 @@ export function HealthGuideSection() {
                                         <Card className="h-full flex flex-col p-0 gap-0 overflow-hidden transition-shadow shadow-sm hover:shadow-lg group">
                                             <div className="relative h-48 w-full bg-muted overflow-hidden flex-none">
                                                 <Image
-                                                    src={article.image || "/abstract-healthcare.png?height=240&width=480&query=health guide article"}
+                                                    src={article.image || "/placeholder-clinic.jpg"}
                                                     alt={article.title}
                                                     fill
                                                     className="object-cover transition-transform duration-500 group-hover:scale-105"
@@ -119,7 +118,7 @@ export function HealthGuideSection() {
 
                 {!featuredArticlesQuery.isLoading && articles.length === 0 ? (
                     <p className="mt-4 text-sm text-muted-foreground">
-                        {t(HOME_TEXTS.ARTICLES.EMPTY.vi, HOME_TEXTS.ARTICLES.EMPTY.en)}
+                        {t("articles.empty")}
                     </p>
                 ) : null}
             </div>

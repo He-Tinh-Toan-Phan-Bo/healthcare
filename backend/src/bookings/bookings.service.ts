@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { BookingStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ERROR_CODES } from '../common/constants/error-codes';
 import { CancelBookingDto } from './dto/cancel-booking.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { RescheduleBookingDto } from './dto/reschedule-booking.dto';
@@ -16,14 +17,14 @@ export class BookingsService {
     });
     if (!clinic) {
       throw new BadRequestException({
-        code: 'INVALID_CLINIC',
+        code: ERROR_CODES.INVALID_CLINIC,
         message: 'Invalid clinicId',
       });
     }
 
     if (!clinic.isOpen) {
       throw new BadRequestException({
-        code: 'CLINIC_CLOSED',
+        code: ERROR_CODES.CLINIC_CLOSED,
         message: 'Selected clinic is currently closed',
       });
     }
@@ -35,7 +36,7 @@ export class BookingsService {
       });
       if (!doctor || doctor?.clinicId !== dto.clinicId) {
         throw new BadRequestException({
-          code: 'INVALID_DOCTOR',
+          code: ERROR_CODES.INVALID_DOCTOR,
           message: 'Invalid doctorId for this clinic',
         });
       }
@@ -44,7 +45,7 @@ export class BookingsService {
     const bookingDate = new Date(dto.bookingDate);
     if (Number.isNaN(bookingDate.getTime())) {
       throw new BadRequestException({
-        code: 'INVALID_BOOKING_DATE',
+        code: ERROR_CODES.INVALID_BOOKING_DATE,
         message: 'Invalid bookingDate',
       });
     }
@@ -59,7 +60,7 @@ export class BookingsService {
     const patientDob = dto.patientDob ? new Date(dto.patientDob) : undefined;
     if (dto.patientDob && Number.isNaN(patientDob?.getTime())) {
       throw new BadRequestException({
-        code: 'INVALID_PATIENT_DOB',
+        code: ERROR_CODES.INVALID_PATIENT_DOB,
         message: 'Invalid patientDob',
       });
     }
@@ -139,7 +140,7 @@ export class BookingsService {
 
     if (!booking) {
       throw new BadRequestException({
-        code: 'BOOKING_NOT_FOUND',
+        code: ERROR_CODES.BOOKING_NOT_FOUND,
         message: 'Booking not found',
       });
     }
@@ -161,7 +162,7 @@ export class BookingsService {
 
     if (!booking) {
       throw new BadRequestException({
-        code: 'BOOKING_NOT_FOUND',
+        code: ERROR_CODES.BOOKING_NOT_FOUND,
         message: 'Booking not found',
       });
     }
@@ -171,7 +172,7 @@ export class BookingsService {
       booking.status !== BookingStatus.CONFIRMED
     ) {
       throw new BadRequestException({
-        code: 'BOOKING_CANNOT_BE_CANCELLED',
+        code: ERROR_CODES.BOOKING_CANNOT_BE_CANCELLED,
         message: 'Only pending or confirmed bookings can be cancelled',
       });
     }
@@ -212,7 +213,7 @@ export class BookingsService {
 
     if (!booking) {
       throw new BadRequestException({
-        code: 'BOOKING_NOT_FOUND',
+        code: ERROR_CODES.BOOKING_NOT_FOUND,
         message: 'Booking not found',
       });
     }
@@ -222,7 +223,7 @@ export class BookingsService {
       booking.status !== BookingStatus.CONFIRMED
     ) {
       throw new BadRequestException({
-        code: 'BOOKING_CANNOT_BE_RESCHEDULED',
+        code: ERROR_CODES.BOOKING_CANNOT_BE_RESCHEDULED,
         message: 'Only pending or confirmed bookings can be rescheduled',
       });
     }
@@ -230,7 +231,7 @@ export class BookingsService {
     const nextBookingDate = new Date(dto.bookingDate);
     if (Number.isNaN(nextBookingDate.getTime())) {
       throw new BadRequestException({
-        code: 'INVALID_BOOKING_DATE',
+        code: ERROR_CODES.INVALID_BOOKING_DATE,
         message: 'Invalid bookingDate',
       });
     }
@@ -286,7 +287,7 @@ export class BookingsService {
 
     if (existingBooking) {
       throw new BadRequestException({
-        code: 'BOOKING_SLOT_UNAVAILABLE',
+        code: ERROR_CODES.BOOKING_SLOT_UNAVAILABLE,
         message: 'This booking slot is not available',
       });
     }
@@ -306,7 +307,7 @@ export class BookingsService {
       minutes > 59
     ) {
       throw new BadRequestException({
-        code: 'INVALID_BOOKING_TIME',
+        code: ERROR_CODES.INVALID_BOOKING_TIME,
         message: 'Invalid bookingTime, expected HH:mm',
       });
     }
@@ -316,7 +317,7 @@ export class BookingsService {
 
     if (dateTime.getTime() < Date.now()) {
       throw new BadRequestException({
-        code: 'BOOKING_IN_THE_PAST',
+        code: ERROR_CODES.BOOKING_IN_THE_PAST,
         message: 'Booking date/time cannot be in the past',
       });
     }

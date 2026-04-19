@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { BookingStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { ERROR_CODES } from '../common/constants/error-codes';
 import { QueryDoctorAvailabilityDto } from './dto/query-doctor-availability.dto';
 import { QueryDoctorsDto } from './dto/query-doctors.dto';
 
@@ -73,7 +74,7 @@ export class DoctorsService {
 
     if (!doctor) {
       throw new NotFoundException({
-        code: 'DOCTOR_NOT_FOUND',
+        code: ERROR_CODES.DOCTOR_NOT_FOUND,
         message: 'Doctor not found',
       });
     }
@@ -106,7 +107,7 @@ export class DoctorsService {
     const date = new Date(dto.date);
     if (Number.isNaN(date.getTime())) {
       throw new BadRequestException({
-        code: 'INVALID_DATE',
+        code: ERROR_CODES.INVALID_DATE,
         message: 'Invalid date',
       });
     }
@@ -123,7 +124,7 @@ export class DoctorsService {
 
     if (!doctor) {
       throw new NotFoundException({
-        code: 'DOCTOR_NOT_FOUND',
+        code: ERROR_CODES.DOCTOR_NOT_FOUND,
         message: 'Doctor not found',
       });
     }
@@ -244,7 +245,7 @@ export class DoctorsService {
       minute > 59
     ) {
       throw new BadRequestException({
-        code: 'INVALID_TIME_FORMAT',
+        code: ERROR_CODES.INVALID_TIME_FORMAT,
         message: 'Invalid time format in doctor schedule',
       });
     }
