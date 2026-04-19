@@ -33,14 +33,9 @@ export function HeroSection() {
                         </div>
 
                         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                            <Link href={ROUTES.BOOKING} className="w-full sm:w-auto">
+                            <Link href="/clinics" className="w-full sm:w-auto">
                                 <Button size="lg" className="w-full bg-primary text-white hover:bg-primary/90 sm:w-auto">
-                                    Đặt Lịch Ngay
-                                </Button>
-                            </Link>
-                            <Link href="/#clinics" className="w-full sm:w-auto">
-                                <Button size="lg" variant="outline" className="w-full sm:w-auto">
-                                    Xem Phòng Khám
+                                    Tìm Phòng Khám / Bác Sĩ
                                 </Button>
                             </Link>
                         </div>

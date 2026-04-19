@@ -630,42 +630,54 @@ function DoctorAdminSection() {
                             ) : null}
 
                             {services.map((service, idx) => (
-                                <div key={`${service.name}-${idx}`} className="grid gap-2 rounded-md border p-3 md:grid-cols-4">
-                                    <Input
-                                        placeholder="Tên dịch vụ"
-                                        value={service.name}
-                                        onChange={(e) => {
-                                            const next = [...services]
-                                            next[idx] = { ...next[idx], name: e.target.value }
-                                            setServices(next)
-                                        }}
-                                    />
-                                    <Input
-                                        type="number"
-                                        min={0}
-                                        placeholder="Giá"
-                                        value={service.price}
-                                        onChange={(e) => {
-                                            const next = [...services]
-                                            next[idx] = { ...next[idx], price: Number(e.target.value) || 0 }
-                                            setServices(next)
-                                        }}
-                                    />
-                                    <Input
-                                        placeholder="Tiền tệ"
-                                        value={service.currency}
-                                        onChange={(e) => {
-                                            const next = [...services]
-                                            next[idx] = { ...next[idx], currency: e.target.value }
-                                            setServices(next)
-                                        }}
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setServices(services.filter((_, i) => i !== idx))}
-                                    >
-                                        Xóa
-                                    </Button>
+                                <div key={idx} className="grid items-end gap-3 rounded-md border p-4 md:grid-cols-12 bg-slate-50/50">
+                                    <div className="space-y-1.5 md:col-span-5">
+                                        <Label className="text-xs text-muted-foreground uppercase font-bold">Tên dịch vụ</Label>
+                                        <Input
+                                            placeholder="VD: Khám tổng quát, Siêu âm..."
+                                            value={service.name}
+                                            onChange={(e) => {
+                                                const next = [...services]
+                                                next[idx] = { ...next[idx], name: e.target.value }
+                                                setServices(next)
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5 md:col-span-3">
+                                        <Label className="text-xs text-muted-foreground uppercase font-bold">Giá dịch vụ</Label>
+                                        <Input
+                                            type="number"
+                                            min={0}
+                                            placeholder="Nhập giá tiền..."
+                                            value={service.price === 0 ? "" : service.price}
+                                            onChange={(e) => {
+                                                const next = [...services]
+                                                next[idx] = { ...next[idx], price: e.target.value === "" ? 0 : Number(e.target.value) }
+                                                setServices(next)
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5 md:col-span-2">
+                                        <Label className="text-xs text-muted-foreground uppercase font-bold">Tiền tệ</Label>
+                                        <Input
+                                            placeholder="VND"
+                                            value={service.currency}
+                                            onChange={(e) => {
+                                                const next = [...services]
+                                                next[idx] = { ...next[idx], currency: e.target.value.toUpperCase() }
+                                                setServices(next)
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="md:col-span-2">
+                                        <Button
+                                            variant="destructive"
+                                            className="w-full"
+                                            onClick={() => setServices(services.filter((_, i) => i !== idx))}
+                                        >
+                                            Xóa dịch vụ
+                                        </Button>
+                                    </div>
                                 </div>
                             ))}
 

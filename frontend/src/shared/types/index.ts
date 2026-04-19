@@ -19,6 +19,7 @@ export interface Clinic {
     isOpen: boolean
 
     openingHours: string
+    website?: string
     specialties?: string[]
     services?: string[]
     reviews?: Review[]

@@ -11,18 +11,9 @@ export function CTASection() {
                     Bắt đầu chăm sóc sức khỏe của bạn ngay hôm nay
                 </p>
                 <div className="flex flex-col justify-center gap-3 sm:flex-row sm:gap-4">
-                    <Link href={ROUTES.BOOKING} className="w-full sm:w-auto">
+                    <Link href="/clinics" className="w-full sm:w-auto">
                         <Button size="lg" variant="secondary" className="w-full bg-white text-primary hover:bg-white/90 sm:w-auto">
-                            Đặt Lịch Ngay
-                        </Button>
-                    </Link>
-                    <Link href="/#clinics" className="w-full sm:w-auto">
-                        <Button
-                            size="lg"
-                            variant="outline"
-                            className="w-full border-white bg-transparent text-white hover:bg-white/10 sm:w-auto"
-                        >
-                            Xem Phòng Khám
+                            Bắt đầu Đặt Lịch
                         </Button>
                     </Link>
                 </div>
