@@ -1,4 +1,4 @@
-import { apiClient } from '@/shared/lib/apiClient'
+import { adminClient } from '@/shared/lib/apiClient'
 
 export type AdminRole = 'PATIENT' | 'DOCTOR' | 'ADMIN'
 
@@ -51,7 +51,7 @@ export type AdminArticle = {
 }
 
 export async function getAdminUsers(role?: AdminRole) {
-    const res = await apiClient.get<{ items: AdminUser[] }>('/v1/admin/users', {
+    const res = await adminClient.get<{ items: AdminUser[] }>('/v1/admin/users', {
         params: role ? { role } : undefined,
     })
     return res.data
@@ -64,7 +64,7 @@ export async function createAdminUser(input: {
     password: string
     role: 'DOCTOR'
 }) {
-    const res = await apiClient.post<AdminUser>('/v1/admin/users', input)
+    const res = await adminClient.post<AdminUser>('/v1/admin/users', input)
     return res.data
 }
 
@@ -76,17 +76,17 @@ export async function updateAdminUser(id: string, input: Partial<{
     role: AdminRole
     isActive: boolean
 }>) {
-    const res = await apiClient.patch<AdminUser>(`/v1/admin/users/${id}`, input)
+    const res = await adminClient.patch<AdminUser>(`/v1/admin/users/${id}`, input)
     return res.data
 }
 
 export async function deleteAdminUser(id: string) {
-    const res = await apiClient.delete<{ id: string }>(`/v1/admin/users/${id}`)
+    const res = await adminClient.delete<{ id: string }>(`/v1/admin/users/${id}`)
     return res.data
 }
 
 export async function getAdminClinics() {
-    const res = await apiClient.get<{ items: AdminClinic[] }>('/v1/admin/clinics')
+    const res = await adminClient.get<{ items: AdminClinic[] }>('/v1/admin/clinics')
     return res.data
 }
 
@@ -101,7 +101,7 @@ export async function createAdminClinic(input: {
     openingHours?: string
     isOpen?: boolean
 }) {
-    const res = await apiClient.post<AdminClinic>('/v1/admin/clinics', input)
+    const res = await adminClient.post<AdminClinic>('/v1/admin/clinics', input)
     return res.data
 }
 
@@ -116,17 +116,17 @@ export async function updateAdminClinic(id: string, input: Partial<{
     openingHours: string
     isOpen: boolean
 }>) {
-    const res = await apiClient.patch<AdminClinic>(`/v1/admin/clinics/${id}`, input)
+    const res = await adminClient.patch<AdminClinic>(`/v1/admin/clinics/${id}`, input)
     return res.data
 }
 
 export async function deleteAdminClinic(id: string) {
-    const res = await apiClient.delete<{ id: string }>(`/v1/admin/clinics/${id}`)
+    const res = await adminClient.delete<{ id: string }>(`/v1/admin/clinics/${id}`)
     return res.data
 }
 
 export async function getAdminDoctors() {
-    const res = await apiClient.get<{ items: AdminDoctor[] }>('/v1/admin/doctors')
+    const res = await adminClient.get<{ items: AdminDoctor[] }>('/v1/admin/doctors')
     return res.data
 }
 
@@ -140,7 +140,7 @@ export async function createAdminDoctor(input: {
     bio?: string
     isAvailable?: boolean
 }) {
-    const res = await apiClient.post<AdminDoctor>('/v1/admin/doctors', input)
+    const res = await adminClient.post<AdminDoctor>('/v1/admin/doctors', input)
     return res.data
 }
 
@@ -154,17 +154,17 @@ export async function updateAdminDoctor(id: string, input: Partial<{
     bio: string
     isAvailable: boolean
 }>) {
-    const res = await apiClient.patch<AdminDoctor>(`/v1/admin/doctors/${id}`, input)
+    const res = await adminClient.patch<AdminDoctor>(`/v1/admin/doctors/${id}`, input)
     return res.data
 }
 
 export async function deleteAdminDoctor(id: string) {
-    const res = await apiClient.delete<{ id: string }>(`/v1/admin/doctors/${id}`)
+    const res = await adminClient.delete<{ id: string }>(`/v1/admin/doctors/${id}`)
     return res.data
 }
 
 export async function getAdminArticles() {
-    const res = await apiClient.get<{ items: AdminArticle[] }>('/v1/admin/articles')
+    const res = await adminClient.get<{ items: AdminArticle[] }>('/v1/admin/articles')
     return res.data
 }
 
@@ -176,7 +176,7 @@ export async function createAdminArticle(input: {
     image?: string
     slug?: string
 }) {
-    const res = await apiClient.post<AdminArticle>('/v1/admin/articles', input)
+    const res = await adminClient.post<AdminArticle>('/v1/admin/articles', input)
     return res.data
 }
 
@@ -188,11 +188,11 @@ export async function updateAdminArticle(id: string, input: Partial<{
     image: string
     slug: string
 }>) {
-    const res = await apiClient.patch<AdminArticle>(`/v1/admin/articles/${id}`, input)
+    const res = await adminClient.patch<AdminArticle>(`/v1/admin/articles/${id}`, input)
     return res.data
 }
 
 export async function deleteAdminArticle(id: string) {
-    const res = await apiClient.delete<{ id: string }>(`/v1/admin/articles/${id}`)
+    const res = await adminClient.delete<{ id: string }>(`/v1/admin/articles/${id}`)
     return res.data
 }

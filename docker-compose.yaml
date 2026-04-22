@@ -1,0 +1,99 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: healthcare-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: healthcare
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: healthcare-redis
+    ports:
+      - "6379:6379"
+
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: auth
+    container_name: healthcare-auth
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/healthcare?schema=public
+      - REDIS_URL=redis://redis:6379
+      - AUTH_PORT=3001
+      - JWT_SECRET=dev-secret-change-me
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+    depends_on:
+      - db
+      - redis
+
+  admin-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: admin
+    container_name: healthcare-admin
+    ports:
+      - "3002:3002"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/healthcare?schema=public
+      - REDIS_URL=redis://redis:6379
+      - ADMIN_PORT=3002
+      - JWT_SECRET=dev-secret-change-me
+    depends_on:
+      - db
+      - redis
+
+  backend-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: backend
+    container_name: healthcare-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/healthcare?schema=public
+      - REDIS_URL=redis://redis:6379
+      - PORT=8080
+      - CORS_ORIGIN=http://localhost:3000
+      - JWT_SECRET=dev-secret-change-me
+    depends_on:
+      - db
+      - redis
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: healthcare-ui
+    ports:
+      - "3000:3000"
+    environment:
+      # Server-side runtime vars — used by next.config.mjs rewrites (NOT build-time)
+      - BACKEND_URL=http://backend-service:8080
+      - AUTH_URL=http://auth-service:3001
+      # Client-side vars — used by browser JS (baked in at build time, point to host)
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:8080
+      - NEXT_PUBLIC_AUTH_BASE_URL=http://localhost:3001
+      - NEXT_PUBLIC_APP_NAME=HealthCare
+    depends_on:
+      - backend-service
+      - auth-service
+
+volumes:
+  pgdata:

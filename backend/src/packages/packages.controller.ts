@@ -1,11 +1,13 @@
 import { Controller, Get, Param } from '@nestjs/common';
 import { PackagesService } from './packages.service';
+import { Public } from 'src/auth/decorators/public.decorator';
 
-@Controller('v1/packages')
+@Controller('packages')
 export class PackagesController {
   constructor(private readonly packagesService: PackagesService) {}
 
   @Get()
+  @Public()
   async findAll() {
     const items = await this.packagesService.findAll();
     return {
@@ -16,6 +18,7 @@ export class PackagesController {
   }
 
   @Get('popular')
+  @Public()
   async findPopular() {
     const items = await this.packagesService.findPopular();
     return {

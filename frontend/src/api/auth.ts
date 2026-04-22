@@ -1,4 +1,4 @@
-import { apiClient } from '@/shared/lib/apiClient'
+import { apiClient, authClient } from '@/shared/lib/apiClient'
 import type { User } from '@/shared/types'
 
 export type AuthResponse = {
@@ -17,7 +17,7 @@ export async function postRegister(input: {
   phone?: string
   password: string
 }): Promise<RegisterResponse> {
-  const res = await apiClient.post<RegisterResponse>('/v1/auth/register', input)
+  const res = await authClient.post<RegisterResponse>('/v1/auth/register', input)
   return res.data
 }
 
@@ -25,12 +25,12 @@ export async function postVerifyRegisterOtp(input: {
   email: string
   otp: string
 }): Promise<AuthResponse> {
-  const res = await apiClient.post<AuthResponse>('/v1/auth/verify-register-otp', input)
+  const res = await authClient.post<AuthResponse>('/v1/auth/verify-register-otp', input)
   return res.data
 }
 
 export async function postLogin(input: { email: string; password: string }): Promise<AuthResponse> {
-  const res = await apiClient.post<AuthResponse>('/v1/auth/login', input)
+  const res = await authClient.post<AuthResponse>('/v1/auth/login', input)
   return res.data
 }
 
