@@ -12,6 +12,7 @@ import { RolesGuard } from '../../../src/auth/guards/roles.guard';
 // Admin-specific modules from original src
 import { AdminModule as CoreAdminModule } from '../../../src/admin/admin.module';
 import { DoctorAdminModule } from '../../../src/doctor-admin/doctor-admin.module';
+import { AuthModule } from '../../../src/auth/auth.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DoctorAdminModule } from '../../../src/doctor-admin/doctor-admin.module
     MailModule,
     CoreAdminModule,
     DoctorAdminModule,
+    AuthModule,
   ],
   providers: [
     {
