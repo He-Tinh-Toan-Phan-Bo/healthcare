@@ -143,7 +143,7 @@ export class DoctorsService {
 
     const settings = this.extractAdminSettings(doctor.qualifications);
     const slotDurationMinutes = settings.slotDurationMinutes ?? 30;
-    const dayOfWeek = date.getDay();
+    const dayOfWeek = date.getUTCDay();
     const workingHour = (settings.workingHours ?? []).find(
       (row) => row.dayOfWeek === dayOfWeek,
     );

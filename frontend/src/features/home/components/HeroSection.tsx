@@ -43,18 +43,21 @@ export function HeroSection() {
                     </div>
 
                     <div className="relative mt-6 lg:mt-0">
-                        <div className="rounded-2xl bg-white p-3 shadow-xl sm:p-4">
-                            <div className="space-y-3">
-                                <h3 className="text-base font-semibold sm:text-lg">{t("hero.side_title")}</h3>
-                                <p className="text-sm text-muted-foreground">
+                        <div className="rounded-2xl bg-white shadow-xl overflow-hidden border border-primary/5 transition-transform hover:scale-[1.02] duration-300">
+                            <div className="p-5 sm:p-6">
+                                <h3 className="text-base font-bold sm:text-lg line-clamp-1 text-primary mb-1">
+                                    {t("hero.side_title")}
+                                </h3>
+                                <p className="text-sm text-muted-foreground leading-relaxed">
                                     {t("hero.side_desc")}
                                 </p>
+                            </div>
+                            <div className="relative aspect-[4/3] w-full">
                                 <Image
                                     src="/friendly-doctor-consulting-with-patient-in-modern-.jpg"
                                     alt="Doctor consulting with patient"
-                                    width={400}
-                                    height={240}
-                                    className="rounded-lg"
+                                    fill
+                                    className="object-cover"
                                 />
                             </div>
                         </div>

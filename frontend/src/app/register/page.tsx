@@ -12,11 +12,14 @@ import Link from "next/link"
 import { useMutation } from "@tanstack/react-query"
 import { postRegister, postVerifyRegisterOtp } from "@/api/auth"
 import { useAuthStore } from "@/store"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const auth = useAuthStore()
+  
+  const nextPath = searchParams.get("next")
 
   const [step, setStep] = useState<"register" | "otp">("register")
 
@@ -39,7 +42,8 @@ export default function RegisterPage() {
     mutationFn: postVerifyRegisterOtp,
     onSuccess: (data) => {
       auth.login(data.user, data.accessToken)
-      router.push("/account")
+      const redirectTo = nextPath?.startsWith("/") ? nextPath : "/account"
+      router.push(redirectTo)
     },
   })
 
@@ -125,7 +129,7 @@ export default function RegisterPage() {
                     </Button>
                     <p className="text-center text-sm text-muted-foreground">
                       Đã có tài khoản?{" "}
-                      <Link href="/login" className="text-primary hover:underline">
+                      <Link href={`/login${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`} className="text-primary hover:underline">
                         Đăng nhập
                       </Link>
                     </p>

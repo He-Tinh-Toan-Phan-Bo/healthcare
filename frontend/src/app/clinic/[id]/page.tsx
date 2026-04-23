@@ -62,7 +62,7 @@ export default function ClinicDetailPage() {
                         "Phòng khám cung cấp các dịch vụ chăm sóc sức khỏe chất lượng, đội ngũ bác sĩ giàu kinh nghiệm."}
                     </p>
                   </div>
-                  <Link href="/booking">
+                  <Link href={`/booking?clinicId=${clinic?.id}`}>
                     <Button size="lg" className="bg-primary">
                       <Clock className="mr-2 h-5 w-5" />
                       Đặt Lịch Khám

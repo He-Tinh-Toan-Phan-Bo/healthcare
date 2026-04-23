@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Header } from "@/components/Header"
 import { Footer } from "@/components/Footer"
 import { Button } from "@/shared/ui/button"
@@ -12,13 +12,20 @@ import { format } from "date-fns"
 import { vi } from "date-fns/locale"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { postBooking } from "@/api/bookings"
-import { getDoctorAvailability, getDoctorDetail } from "@/api/doctors"
+import { getDoctors, getDoctorAvailability, getDoctorDetail } from "@/api/doctors"
 import { getClinics } from "@/api/clinics"
 import { useAuthStore } from "@/store"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Calendar } from "@/shared/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover"
-import { cn } from "@/shared/lib"
+import { cn } from "@/shared/utils"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/shared/ui/select"
 
 export default function BookingPage() {
   const router = useRouter()
@@ -26,6 +33,12 @@ export default function BookingPage() {
   const auth = useAuthStore()
 
   const [step, setStep] = useState(1)
+
+  useEffect(() => {
+    if (!auth.isAuthenticated) {
+      router.push(`/login?next=/booking`)
+    }
+  }, [auth.isAuthenticated, router])
   
   const [clinicId, setClinicId] = useState(searchParams.get("clinicId") || "")
   const [doctorId, setDoctorId] = useState(searchParams.get("doctorId") || "")
@@ -50,15 +63,20 @@ export default function BookingPage() {
     queryFn: () => getClinics({ limit: 50 }),
   })
 
-  // We fetch a list of doctors from the specific clinic, or by getting the clinic data that includes doctors
-  // But wait, our getClinicById API actually returns doctors { take: 12 }.
-  // For simplicity since we don't have getDoctorsByClinic explicitly, we will use a doctorDetailQuery if doctorId is provided.
+  // Lấy danh sách bác sĩ theo phòng khám đã chọn
+  const doctorsQuery = useQuery({
+    queryKey: ["doctors", clinicId],
+    enabled: !!clinicId,
+    queryFn: () => getDoctors({ clinicId }),
+  })
+
   const doctorDetailQuery = useQuery({
     queryKey: ["doctorDetail", doctorId],
     enabled: !!doctorId,
     queryFn: () => getDoctorDetail(doctorId),
   })
 
+  // Nếu doctorId thay đổi và có dữ liệu detail, tự động set clinicId
   useEffect(() => {
     if (doctorDetailQuery.data && doctorDetailQuery.data.clinic) {
       setClinicId(doctorDetailQuery.data.clinic.id)
@@ -66,10 +84,17 @@ export default function BookingPage() {
   }, [doctorDetailQuery.data])
 
   const availQuery = useQuery({
-    queryKey: ["availability", doctorId, date.toISOString().slice(0, 10)],
+    queryKey: ["availability", doctorId, format(date, "yyyy-MM-dd")],
     enabled: !!doctorId && !!date && step >= 2,
-    queryFn: () => getDoctorAvailability(doctorId, date.toISOString().slice(0, 10)),
+    queryFn: () => getDoctorAvailability(doctorId, format(date, "yyyy-MM-dd")),
   })
+
+  const availableSlots = useMemo(() => {
+    const res = availQuery.data as any
+    if (!res) return []
+    if (Array.isArray(res)) return res
+    return res.availableSlots || res.items || []
+  }, [availQuery.data])
 
   const createBookingMutation = useMutation({
     mutationFn: postBooking,
@@ -119,11 +144,7 @@ export default function BookingPage() {
                   <CardDescription>Kiểm tra thông tin trước khi chọn lịch</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {!auth.isAuthenticated && (
-                    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive mb-4">
-                      Vui lòng <strong>Đăng nhập</strong> để quản lý lịch hẹn dễ dàng hơn. Hệ thống vẫn cho phép đặt lịch, nhưng bạn sẽ không xem lại được trên tài khoản.
-                    </div>
-                  )}
+
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-2">
@@ -142,7 +163,7 @@ export default function BookingPage() {
                         type="tel"
                         value={patientPhone}
                         onChange={(e) => setPatientPhone(e.target.value)}
-                        placeholder="0912345678"
+                        placeholder="Ví dụ: 0912345678"
                       />
                     </div>
                     <div className="space-y-2">
@@ -157,13 +178,53 @@ export default function BookingPage() {
                     </div>
                   </div>
 
-                  <div className="mt-6 border-t pt-4">
-                    <Label className="mb-2 block">Cơ sở & Bác sĩ đang chọn</Label>
-                    {doctorDetailQuery.isLoading ? (
-                      <div className="text-sm text-muted-foreground">Đang tải dữ liệu bác sĩ...</div>
-                    ) : doctorDetailQuery.data ? (
-                      <div className="flex bg-muted/50 p-4 rounded-lg items-center gap-4 border">
-                        <div className="h-16 w-16 overflow-hidden rounded-full border bg-background">
+                  <div className="mt-6 border-t pt-6 space-y-4">
+                    <Label className="text-base font-semibold">Chọn Cơ sở & Bác sĩ</Label>
+                    
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Phòng khám</Label>
+                        <Select value={clinicId} onValueChange={(val) => {
+                          setClinicId(val)
+                          setDoctorId("") // Reset doctor when clinic changes
+                        }}>
+                          <SelectTrigger className="bg-white border-gray-200">
+                            <SelectValue placeholder="Chọn phòng khám" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(clinicsQuery.data?.items ?? []).map((clinic: any) => (
+                              <SelectItem key={clinic.id} value={clinic.id}>
+                                {clinic.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Bác sĩ</Label>
+                        <Select 
+                          value={doctorId} 
+                          onValueChange={setDoctorId}
+                          disabled={!clinicId || doctorsQuery.isLoading}
+                        >
+                          <SelectTrigger className="bg-white border-gray-200">
+                            <SelectValue placeholder={doctorsQuery.isLoading ? "Đang tải..." : "Chọn bác sĩ"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(doctorsQuery.data?.items ?? []).map((doc: any) => (
+                              <SelectItem key={doc.id} value={doc.id}>
+                                {doc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {doctorId && doctorDetailQuery.data && (
+                      <div className="flex bg-primary/5 p-4 rounded-xl items-center gap-4 border border-primary/10 animate-in fade-in slide-in-from-top-2 duration-300 mt-2">
+                        <div className="h-14 w-14 overflow-hidden rounded-full border-2 border-white shadow-sm bg-background">
                           <img 
                             src={doctorDetailQuery.data.avatar || "/modern-clinic-.jpg"} 
                             alt={doctorDetailQuery.data.name} 
@@ -171,26 +232,28 @@ export default function BookingPage() {
                           />
                         </div>
                         <div>
-                          <h4 className="font-semibold text-lg">{doctorDetailQuery.data.name}</h4>
-                          <p className="text-sm text-muted-foreground flex items-center">
-                            <MapPin className="mr-1 h-3 w-3" /> {doctorDetailQuery.data.clinic?.name}
+                          <h4 className="font-bold text-gray-900">{doctorDetailQuery.data.name}</h4>
+                          <p className="text-xs text-muted-foreground flex items-center mt-0.5">
+                            <MapPin className="mr-1 h-3 w-3 text-primary" /> {doctorDetailQuery.data.clinic?.name}
                           </p>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="text-sm text-destructive">
-                        Chưa chọn Bác sĩ hợp lệ. Quay lại danh sách Bác sĩ để chọn lại.
                       </div>
                     )}
                   </div>
 
                   <div className="flex justify-end pt-4">
                     <Button 
-                      onClick={() => setStep(2)} 
-                      disabled={!patientName || !patientPhone || !patientEmail || !doctorId} 
-                      className="bg-primary"
+                      onClick={() => {
+                        if (!patientName || !patientPhone || !patientEmail || !doctorId) {
+                          alert("Vui lòng điền đầy đủ thông tin bắt buộc (*)")
+                          return
+                        }
+                        setStep(2)
+                      }} 
+                      className="bg-primary hover:bg-primary/90 shadow-md transition-all active:scale-95 px-8"
                     >
                       Tiếp Theo: Chọn Thời Gian
+                      <ChevronRight className="ml-2 h-4 w-4" />
                     </Button>
                   </div>
                 </CardContent>
@@ -229,25 +292,35 @@ export default function BookingPage() {
                         Khung Giờ (Ngày {format(date, "dd/MM/yyyy")})
                       </Label>
                       {availQuery.isLoading ? (
-                        <div className="text-sm text-muted-foreground">Đang tải lịch trống...</div>
-                      ) : !availQuery.data || availQuery.data.length === 0 ? (
-                        <div className="text-sm text-amber-600 bg-amber-50 p-3 rounded-md border border-amber-200">
+                        <div className="text-sm text-muted-foreground italic">Đang tải lịch trống...</div>
+                      ) : availableSlots.length === 0 ? (
+                        <div className="text-sm text-amber-600 bg-amber-50 p-4 rounded-xl border border-amber-200">
                           Bác sĩ không có lịch làm việc ngày này. Vui lòng chọn ngày khác.
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-2">
-                          {availQuery.data.map((slot: any) => (
-                            <Button
-                              key={slot.time}
-                              variant={selectedTime === slot.time ? "default" : "outline"}
-                              className={selectedTime === slot.time ? "bg-primary" : ""}
-                              disabled={!slot.isAvailable}
-                              onClick={() => setSelectedTime(slot.time)}
-                            >
-                              <Clock className="mr-2 h-4 w-4" />
-                              {slot.time}
-                            </Button>
-                          ))}
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                            {availableSlots.map((slot: any, idx: number) => {
+                              const timeValue = typeof slot === 'string' ? slot : slot.time;
+                              const isAvailable = typeof slot === 'string' ? true : (slot.isAvailable ?? true);
+                              
+                              return (
+                                <Button
+                                  key={`${timeValue}-${idx}`}
+                                  variant={selectedTime === timeValue ? "default" : "outline"}
+                                  className={cn(
+                                    "transition-all duration-200",
+                                    selectedTime === timeValue ? "bg-primary shadow-md scale-[1.02]" : "hover:border-primary hover:text-primary"
+                                  )}
+                                  disabled={!isAvailable}
+                                  onClick={() => setSelectedTime(timeValue)}
+                                >
+                                  <Clock className="mr-2 h-4 w-4" />
+                                  {timeValue}
+                                </Button>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -325,7 +398,7 @@ export default function BookingPage() {
                           patientName,
                           patientEmail,
                           patientPhone,
-                          bookingDate: date.toISOString().slice(0, 10),
+                          bookingDate: format(date, "yyyy-MM-dd"),
                           bookingTime: selectedTime,
                         })
                       }

@@ -116,7 +116,7 @@ export default function LoginPage() {
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
                   Chưa có tài khoản?{" "}
-                  <Link href="/register" className="text-primary hover:underline">
+                  <Link href={`/register${searchParams.get("next") ? `?next=${encodeURIComponent(searchParams.get("next") as string)}` : ""}`} className="text-primary hover:underline">
                     Đăng ký ngay
                   </Link>
                 </p>

@@ -38,10 +38,10 @@ export default function ClinicsPage() {
           </div>
 
           {/* Search and Filter */}
-          <Card className="mb-6">
+          <Card className="mb-8 w-fit shadow-sm border-gray-100">
             <CardContent className="px-3 py-2.5 sm:px-4 sm:py-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                <div className="relative w-full max-w-sm sm:max-w-md">
+                <div className="relative w-full max-w-[320px]">
                   <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder={t(HOME_TEXTS.PAGES.CLINICS.SEARCH_PLACEHOLDER.vi, HOME_TEXTS.PAGES.CLINICS.SEARCH_PLACEHOLDER.en)}
@@ -121,7 +121,7 @@ export default function ClinicsPage() {
                       {t(HOME_TEXTS.PAGES.CLINICS.VIEW_DETAIL.vi, HOME_TEXTS.PAGES.CLINICS.VIEW_DETAIL.en)}
                     </Button>
                   </Link>
-                  <Link href="/booking" className="flex-1">
+                  <Link href={`/booking?clinicId=${clinic.id}`} className="flex-1">
                     <Button className="w-full bg-primary">{t(HOME_TEXTS.PAGES.CLINICS.BOOK_NOW.vi, HOME_TEXTS.PAGES.CLINICS.BOOK_NOW.en)}</Button>
                   </Link>
                 </CardFooter>

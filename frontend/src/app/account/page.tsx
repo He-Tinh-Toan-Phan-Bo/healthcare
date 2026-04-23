@@ -19,9 +19,20 @@ import { getMyBookings, cancelBooking } from "@/api/bookings"
 import { updateProfile } from "@/api/users"
 import { createReview } from "@/api/reviews"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 
 export default function AccountPage() {
-  const [activeTab, setActiveTab] = useState("appointments")
+  const searchParams = useSearchParams()
+  const defaultTab = searchParams.get("tab") || "appointments"
+  const [activeTab, setActiveTab] = useState(defaultTab)
+
+  useEffect(() => {
+    const tab = searchParams.get("tab")
+    if (tab) {
+      setActiveTab(tab)
+    }
+  }, [searchParams])
+
   const auth = useAuthStore()
   const queryClient = useQueryClient()
 

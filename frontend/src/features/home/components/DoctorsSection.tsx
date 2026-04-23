@@ -112,7 +112,7 @@ export function DoctorsSection() {
                                         <p className="text-sm text-muted-foreground line-clamp-1 italic">
                                             {doctor.experience}+ {td("years_exp")}
                                         </p>
-                                        <Link href={ROUTES.BOOKING} className="w-full mt-auto">
+                                        <Link href={`${ROUTES.BOOKING}?doctorId=${doctor.id}`} className="flex-1">
                                             <Button variant="secondary" className="w-full group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-sm active:scale-95">
                                                 {td("book_now")}
                                             </Button>
