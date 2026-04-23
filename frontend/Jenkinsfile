@@ -36,7 +36,6 @@ pipeline {
                     echo "=== RAM ===" && free -mh
                     echo "=== Disk ===" && df -h
                     echo "=== Docker ===" && docker version --format "Client: {{.Client.Version}}  Server: {{.Server.Version}}"
-                    echo "params.RELEASE_TAG=${params.RELEASE_TAG}"
                 '''
             }
         }
@@ -125,6 +124,7 @@ pipeline {
         stage('App CI and Staging Deployment') {
             when {
                 expression { return !params.RELEASE_TAG?.trim() }
+                not { buildingTag() }
             }
             stages {
                 stage('Step 4: Build Image (Staging)') {
@@ -195,10 +195,10 @@ pipeline {
                             echo "🚀 Starting production release for: ${params.RELEASE_TAG}"
                             withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
                                 sh """
-                                    git config user.name "Jenkins CI"
-                                    git config user.email "jenkins@kltn.internal"
+                                    git config user.name "thanhdc"
+                                    git config user.email "chithanh040804@gmail.com"
                                     git tag ${params.RELEASE_TAG}
-                                    git push http://thanhdc:${TOKEN}@gitea.kltn.internal/kltn/${IMAGE_NAME}.git ${params.RELEASE_TAG}
+                                    git push http://thanhdc:${TOKEN}@gitea.kltn.internal/kltn/healthcare.git ${RELEASE_TAG}
                                 """
                             }
                         }
@@ -226,14 +226,39 @@ pipeline {
                     }
                 }
 
+                stage('Create Gitea Release') {
+                    steps {
+                        script {
+                            echo "📝 Đang tạo Release chính thức trên Gitea cho tag: ${params.RELEASE_TAG}..."
+                            withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
+                                sh '''
+                                    set -e
+                                    # Tạo payload JSON cho API Gitea
+                                    RELEASE_PAYLOAD=$(printf '{"tag_name":"%s","name":"Release %s","body":"Bản phát hành Production %s được tự động build và push bởi Jenkins."}' "${RELEASE_TAG}" "${RELEASE_TAG}" "${RELEASE_TAG}")
+
+                                    # Gọi API tạo Release vào kho ứng dụng (kltn/healthcare)
+                                    curl --silent --show-error --fail-with-body -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare/releases" \
+                                        -H "accept: application/json" \
+                                        -H "Authorization: token ${TOKEN}" \
+                                        -H "Content-Type: application/json" \
+                                        --data "${RELEASE_PAYLOAD}"
+
+                                    echo "✅ Đã tạo trang Release trên Gitea thành công!"
+                                '''
+                            }
+                        }
+                    }
+                }
+
                 stage('Update Prod Manifest & Create PR') {
                     steps {
                         dir('manifests-workspace') {
                             withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
-                                sh """
+                                // SỬ DỤNG NGOẶC ĐƠN BA ''' ĐỂ TRÁNH LỖI NỘI SUY CỦA GROOVY
+                                sh '''
                                     set -e
-                                    RELEASE_TAG="${params.RELEASE_TAG}"
-                                    if [ -z "${params.RELEASE_TAG}" ]; then
+                                    # Tham số của Jenkins tự động trở thành biến môi trường, Bash có thể đọc trực tiếp
+                                    if [ -z "$RELEASE_TAG" ]; then
                                         echo "Error: Release tag not provided." >&2
                                         exit 1
                                     fi
@@ -245,7 +270,7 @@ pipeline {
                                     git checkout -b ${TEMP_BRANCH}
 
                                     cd apps/overlays/production/frontend
-                                    sed -i "s#newName:.*#newName: $GITEA_REGISTRY/$GITEA_OWNER/$IMAGE_NAME#g" kustomization.yaml
+                                    sed -i "s#newName:.*#newName: ${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}#g" kustomization.yaml
                                     sed -i 's/newTag:.*/newTag: "'"${RELEASE_TAG}"'"/g' kustomization.yaml
 
                                     git add kustomization.yaml
@@ -253,6 +278,8 @@ pipeline {
                                     git push origin ${TEMP_BRANCH}
 
                                     echo "Creating Production Pull Request for ${TEMP_BRANCH}..."
+                                    
+                                    # Bash sẽ xử lý an toàn các lệnh $(...) này
                                     PR_PAYLOAD=$(printf '{"base":"main","head":"%s","title":"🚀 Deploy to Production: Frontend %s","body":"This PR was generated automatically by Jenkins for Release %s. Please review carefully before merging."}' "${TEMP_BRANCH}" "${RELEASE_TAG}" "${RELEASE_TAG}")
 
                                     PR_RESPONSE=$(curl --silent --show-error --fail-with-body -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare-manifests/pulls" \
@@ -267,7 +294,7 @@ pipeline {
                                     else
                                         echo "✅ Success: Production PR created."
                                     fi
-                                """
+                                '''
                             }
                         }
                     }
