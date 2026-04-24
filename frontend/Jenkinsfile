@@ -2,33 +2,40 @@ pipeline {
     agent any
 
     environment {
-        // ─── Registry ────────────────────────────────────────────────────────────
+        // Registry Configuration
         GITEA_REGISTRY  = "gitea.kltn.internal:80"
         GITEA_OWNER     = "kltn"
         IMAGE_NAME      = "healthcare-frontend"
         GITEA_CREDS_ID  = "gitea-token-admin"
 
-        // ─── SonarQube ───────────────────────────────────────────────────────────
+        // SonarQube Configuration
         SONAR_SERVER    = "sonar-server"
         SONAR_SCANNER   = "sonar-scanner"
 
-        // ─── Derived image tag (build number) ────────────────────────────────────
+        // Git Configuration
+        GIT_USER_NAME   = "thanhdc"
+        GIT_USER_EMAIL  = "chithanh040804@gmail.com"
+        
+        // Derived Variables
         IMAGE_TAG       = "${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}:${BUILD_NUMBER}"
     }
 
     options {
-        timestamps()                        // Prepend timestamps to every log line
-        disableConcurrentBuilds()           // Prevent race conditions on shared runners
+        timestamps()
+        disableConcurrentBuilds()
         buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 
     parameters {
-        string(name: 'RELEASE_TAG', defaultValue: '', description: 'Release tag to deploy to production (leave empty for staging)')
+        string(
+            name: 'RELEASE_TAG',
+            defaultValue: '',
+            description: 'Release tag to deploy to production (leave empty for staging)'
+        )
     }
 
     stages {
 
-        // ── 0. System snapshot (useful for debugging runner capacity) ─────────────
         stage('System Information') {
             steps {
                 sh '''
@@ -40,167 +47,134 @@ pipeline {
             }
         }
 
-        // ── 1. Checkout ───────────────────────────────────────────────────────────
-        stage('Step 1: Checkout') {
+        stage('Checkout') {
             steps {
                 checkout scm
                 echo "Branch: ${env.BRANCH_NAME ?: 'N/A'} | Commit: ${env.GIT_COMMIT?.take(8) ?: 'N/A'}"
             }
         }
 
-        // ── 2. Security & Analysis (Parallel) ────────────────────────────
-        stage('Step 2: Security & Analysis') {
+        stage('Security & Quality Analysis') {
             parallel {
-
-                        stage('SonarQube Scan') {
-                            steps {
-                                script {
-                                    def scannerHome = tool SONAR_SCANNER
-                                    withSonarQubeEnv(SONAR_SERVER) {
-                                        sh """
-                                            ${scannerHome}/bin/sonar-scanner \
-                                                -Dsonar.projectKey=${env.JOB_BASE_NAME} \
-                                                -Dsonar.sources=.
-                                        """
-                                    }
-                                }
-                            }
-                        }
-
-                        stage('Hadolint – Dockerfile Lint') {
-                            steps {
-                                script {
-                                    // [ALLOW FAILURE] exit-code 0 so pipeline continues.
-                                    // TODO: Set --failure-threshold error (or remove || true) once
-                                    //       all Dockerfile warnings have been resolved.
-                                    sh '''
-                                        docker run --rm -i hadolint/hadolint:v2.14.0 hadolint \
-                                            --failure-threshold style \
-                                            - < ./frontend/Dockerfile || true
-                                    '''
-                                }
-                            }
-                        }
-
-                        stage('Trivy – Source Scan') {
-                            steps {
-                                script {
-                                    // [ALLOW FAILURE] --exit-code 0 keeps the build green while
-                                    // the team works through existing HIGH/CRITICAL findings.
-                                    // TODO: Change --exit-code to 1 to enforce hard-fail once
-                                    //       dependency vulnerabilities are remediated.
-                                    sh """
-                                        docker run --rm \
-                                            -v /var/run/docker.sock:/var/run/docker.sock \
-                                            -v \${HOME}/.cache/trivy:/root/.cache/trivy \
-                                            aquasec/trivy:0.69.3 fs \
-                                                --scanners vuln,secret \
-                                                --severity HIGH,CRITICAL \
-                                                --exit-code 0 \
-                                                --no-progress \
-                                                .
-                                    """
-                                }
-                            }
-                        }
-                    }
-        }
-
-        // ── 3. Quality Gate (SonarQube webhook) ─────────────────────────────
-        stage('Step 3: Quality Gate') {
-            steps {
-                // [ALLOW FAILURE] abortPipeline:false keeps the build green while
-                // the team tunes SonarQube quality profiles.
-                // TODO: Set abortPipeline:true once the project consistently passes.
-                timeout(time: 5, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: false
-                }
-            }
-        }
-
-        // ==========================================
-        // PART A: CI & STAGING (Runs when no release tag is provided)
-        // ==========================================
-        stage('App CI and Staging Deployment') {
-            when {
-                allOf{
-                    branch 'main' // 1. BẮT BUỘC phải là nhánh main
-                    expression { return !params.RELEASE_TAG?.trim() } // 2. Ô nhập Tag bị bỏ trống
-                }
-            }
-            stages {
-                stage('Step 4: Build Image (Staging)') {
+                stage('SonarQube Scan') {
                     steps {
                         script {
-                            echo "Building Staging image: ${IMAGE_TAG}"
-                            sh "docker build -t ${IMAGE_TAG} ./frontend"
-                        }
-                    }
-                }
-
-                stage('Step 6: Push to Gitea Registry (Staging)') {
-                    steps {
-                        script {
-                            withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
+                            def scannerHome = tool SONAR_SCANNER
+                            withSonarQubeEnv(SONAR_SERVER) {
                                 sh """
-                                    echo "\$TOKEN" | docker login ${GITEA_REGISTRY} \
-                                        --username admin --password-stdin
-                                    docker push ${IMAGE_TAG}
-                                    echo "✓ Pushed: ${IMAGE_TAG}"
+                                    ${scannerHome}/bin/sonar-scanner \
+                                        -Dsonar.projectKey=${env.JOB_BASE_NAME} \
+                                        -Dsonar.sources=.
                                 """
                             }
                         }
                     }
                 }
 
-                stage('Step 7: Update Staging Manifests (Push to main)') {
+                stage('Dockerfile Lint (Hadolint)') {
                     steps {
-                        dir('manifests-workspace') {
-                            withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
-                                sh '''
-                                    set -e
-                                    GIT_REPO_URL="http://thanhdc:${TOKEN}@gitea.kltn.internal/kltn/healthcare-manifests.git"
-                                    git clone "${GIT_REPO_URL}" .
-                                    
-                                    # Ensure we are on main
-                                    git checkout main
-                                    
-                                    cd apps/overlays/staging/frontend
-                                    sed -i "s#newName:.*#newName: $GITEA_REGISTRY/$GITEA_OWNER/$IMAGE_NAME#g" kustomization.yaml
-                                    sed -i 's/newTag:.*/newTag: "'"${BUILD_NUMBER}"'"/g' kustomization.yaml
+                        script {
+                            // Allow failure - remove '|| true' once all warnings are resolved
+                            sh '''
+                                docker run --rm -i hadolint/hadolint:v2.14.0 hadolint \
+                                    --failure-threshold style \
+                                    - < ./frontend/Dockerfile || true
+                            '''
+                        }
+                    }
+                }
 
-                                    git add kustomization.yaml
-                                    git -c user.name="thanhdc" -c user.email="chithanh040804@gmail.com" commit -m "ci(staging): update frontend tag to ${BUILD_NUMBER}"
-                                    
-                                    # Push directly to main in the CD repo
-                                    git push origin main
-                                    echo "✅ Success: Staging configuration pushed to main."
-                                '''
-                            }
+                stage('Vulnerability Scan (Trivy)') {
+                    steps {
+                        script {
+                            // Allow failure - change --exit-code to 1 once vulnerabilities are remediated
+                            sh """
+                                docker run --rm \
+                                    -v /var/run/docker.sock:/var/run/docker.sock \
+                                    -v \${HOME}/.cache/trivy:/root/.cache/trivy \
+                                    aquasec/trivy:0.69.3 fs \
+                                        --scanners vuln,secret \
+                                        --severity HIGH,CRITICAL \
+                                        --exit-code 0 \
+                                        --no-progress \
+                                        .
+                            """
                         }
                     }
                 }
             }
         }
 
-        // ==========================================
-        // PART B: PRODUCTION (Runs when a release tag is provided)
-        // ==========================================
-        stage('Production Governance') {
+        stage('Quality Gate') {
+            steps {
+                // Allow failure - set abortPipeline:true once project consistently passes
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: false
+                }
+            }
+        }
+
+        // CI & Staging Deployment (runs when RELEASE_TAG is empty)
+        stage('Staging Deployment') {
+            when {
+                allOf {
+                    branch 'main'
+                    expression { return !params.RELEASE_TAG?.trim() }
+                }
+            }
+            stages {
+                stage('Build Staging Image') {
+                    steps {
+                        script {
+                            echo "Building staging image: ${IMAGE_TAG}"
+                            sh "docker build -t ${IMAGE_TAG} ./frontend"
+                        }
+                    }
+                }
+
+                stage('Push to Registry') {
+                    steps {
+                        script {
+                            dockerLogin()
+                            sh """
+                                docker push ${IMAGE_TAG}
+                                echo "Pushed: ${IMAGE_TAG}"
+                            """
+                        }
+                    }
+                }
+
+                stage('Update Staging Manifests') {
+                    steps {
+                        script {
+                            updateManifests(
+                                environment: 'staging',
+                                imageTag: BUILD_NUMBER,
+                                branch: 'main',
+                                commitMessage: "ci(staging): update frontend tag to ${BUILD_NUMBER}"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Production Release (runs when RELEASE_TAG is provided)
+        stage('Production Release') {
             when {
                 expression { return params.RELEASE_TAG?.trim() }
             }
             stages {
-                stage('Push Git Tag to App Repo') {
+                stage('Create Git Tag') {
                     steps {
                         script {
-                            echo "🚀 Starting production release for: ${params.RELEASE_TAG}"
+                            echo "Starting production release for: ${params.RELEASE_TAG}"
                             withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
                                 sh """
-                                    git config user.name "thanhdc"
-                                    git config user.email "chithanh040804@gmail.com"
+                                    git config user.name "${GIT_USER_NAME}"
+                                    git config user.email "${GIT_USER_EMAIL}"
                                     git tag ${params.RELEASE_TAG}
-                                    git push http://thanhdc:${TOKEN}@gitea.kltn.internal/kltn/healthcare.git ${RELEASE_TAG}
+                                    git push http://${GIT_USER_NAME}:\${TOKEN}@gitea.kltn.internal/kltn/healthcare.git ${params.RELEASE_TAG}
                                 """
                             }
                         }
@@ -210,20 +184,16 @@ pipeline {
                 stage('Build Production Image') {
                     steps {
                         script {
-                            def releaseTag = params.RELEASE_TAG
-                            def prodImageTag = "${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}:${releaseTag}"
-
-                            echo "🚀 Building production image: ${prodImageTag}"
+                            def prodImageTag = "${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}:${params.RELEASE_TAG}"
+                            echo "Building production image: ${prodImageTag}"
+                            
                             sh "docker build -t ${prodImageTag} ./frontend"
-
-                            withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
-                                sh """
-                                    echo "\$TOKEN" | docker login ${GITEA_REGISTRY} \
-                                        --username admin --password-stdin
-                                    docker push ${prodImageTag}
-                                    echo "✓ Pushed: ${prodImageTag}"
-                                """
-                            }
+                            
+                            dockerLogin()
+                            sh """
+                                docker push ${prodImageTag}
+                                echo "Pushed: ${prodImageTag}"
+                            """
                         }
                     }
                 }
@@ -231,73 +201,34 @@ pipeline {
                 stage('Create Gitea Release') {
                     steps {
                         script {
-                            echo "📝 Đang tạo Release chính thức trên Gitea cho tag: ${params.RELEASE_TAG}..."
+                            echo "Creating official release on Gitea for tag: ${params.RELEASE_TAG}"
                             withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
                                 sh '''
                                     set -e
-                                    # Tạo payload JSON cho API Gitea
-                                    RELEASE_PAYLOAD=$(printf '{"tag_name":"%s","name":"Release %s","body":"Bản phát hành Production %s được tự động build và push bởi Jenkins."}' "${RELEASE_TAG}" "${RELEASE_TAG}" "${RELEASE_TAG}")
+                                    RELEASE_PAYLOAD=$(printf '{"tag_name":"%s","name":"Release %s","body":"Production release %s automatically built and pushed by Jenkins."}' \
+                                        "${RELEASE_TAG}" "${RELEASE_TAG}" "${RELEASE_TAG}")
 
-                                    # Gọi API tạo Release vào kho ứng dụng (kltn/healthcare)
-                                    curl --silent --show-error --fail-with-body -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare/releases" \
+                                    curl --silent --show-error --fail-with-body \
+                                        -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare/releases" \
                                         -H "accept: application/json" \
                                         -H "Authorization: token ${TOKEN}" \
                                         -H "Content-Type: application/json" \
                                         --data "${RELEASE_PAYLOAD}"
 
-                                    echo "✅ Đã tạo trang Release trên Gitea thành công!"
+                                    echo "Gitea release created successfully"
                                 '''
                             }
                         }
                     }
                 }
 
-                stage('Update Prod Manifest & Create PR') {
+                stage('Create Production PR') {
                     steps {
-                        dir('manifests-workspace') {
-                            withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
-                                // SỬ DỤNG NGOẶC ĐƠN BA ''' ĐỂ TRÁNH LỖI NỘI SUY CỦA GROOVY
-                                sh '''
-                                    set -e
-                                    # Tham số của Jenkins tự động trở thành biến môi trường, Bash có thể đọc trực tiếp
-                                    if [ -z "$RELEASE_TAG" ]; then
-                                        echo "Error: Release tag not provided." >&2
-                                        exit 1
-                                    fi
-
-                                    GIT_REPO_URL="http://thanhdc:${TOKEN}@gitea.kltn.internal/kltn/healthcare-manifests.git"
-                                    git clone "${GIT_REPO_URL}" .
-
-                                    TEMP_BRANCH="release-prod-${RELEASE_TAG}"
-                                    git checkout -b ${TEMP_BRANCH}
-
-                                    cd apps/overlays/production/frontend
-                                    sed -i "s#newName:.*#newName: ${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}#g" kustomization.yaml
-                                    sed -i 's/newTag:.*/newTag: "'"${RELEASE_TAG}"'"/g' kustomization.yaml
-
-                                    git add kustomization.yaml
-                                    git -c user.name="thanhdc" -c user.email="chithanh040804@gmail.com" commit -m "chore(prod): update frontend to ${RELEASE_TAG}"
-                                    git push origin ${TEMP_BRANCH}
-
-                                    echo "Creating Production Pull Request for ${TEMP_BRANCH}..."
-                                    
-                                    # Bash sẽ xử lý an toàn các lệnh $(...) này
-                                    PR_PAYLOAD=$(printf '{"base":"main","head":"%s","title":"🚀 Deploy to Production: Frontend %s","body":"This PR was generated automatically by Jenkins for Release %s. Please review carefully before merging."}' "${TEMP_BRANCH}" "${RELEASE_TAG}" "${RELEASE_TAG}")
-
-                                    PR_RESPONSE=$(curl --silent --show-error --fail-with-body -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare-manifests/pulls" \
-                                        -H "accept: application/json" \
-                                        -H "Authorization: token ${TOKEN}" \
-                                        -H "Content-Type: application/json" \
-                                        --data "${PR_PAYLOAD}")
-
-                                    PR_URL=$(echo "${PR_RESPONSE}" | grep -oE '"html_url":"[^"]+"' | head -n 1 | cut -d '"' -f 4 || true)
-                                    if [ -n "${PR_URL}" ]; then
-                                        echo "✅ Success: Production PR created: ${PR_URL}"
-                                    else
-                                        echo "✅ Success: Production PR created."
-                                    fi
-                                '''
-                            }
+                        script {
+                            createProductionPR(
+                                releaseTag: params.RELEASE_TAG,
+                                imageTag: params.RELEASE_TAG
+                            )
                         }
                     }
                 }
@@ -308,26 +239,108 @@ pipeline {
     post {
         always {
             script {
-                echo "=== Post-build Cleanup ==="
-
+                echo "Post-build cleanup"
+                
                 sh "docker logout ${GITEA_REGISTRY} || true"
-
-                def tagToRemove = params.RELEASE_TAG ? params.RELEASE_TAG : BUILD_NUMBER
+                
+                def tagToRemove = params.RELEASE_TAG ?: BUILD_NUMBER
                 sh "docker rmi -f ${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}:${tagToRemove} || true"
-
+                
                 sh "docker image prune -f || true"
                 sh "docker builder prune -f || true"
-
+                
                 cleanWs()
             }
         }
 
         success {
-            echo "✅ Pipeline PASSED!"
+            echo "Pipeline completed successfully"
         }
 
         failure {
-            echo "❌ Pipeline FAILED — review stage logs above for details."
+            echo "Pipeline failed - review stage logs for details"
+        }
+    }
+}
+
+// Helper Functions
+def dockerLogin() {
+    withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
+        sh """
+            echo "\$TOKEN" | docker login ${GITEA_REGISTRY} \
+                --username admin --password-stdin
+        """
+    }
+}
+
+def updateManifests(Map config) {
+    dir('manifests-workspace') {
+        withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
+            sh """
+                set -e
+                GIT_REPO_URL="http://${GIT_USER_NAME}:\${TOKEN}@gitea.kltn.internal/kltn/healthcare-manifests.git"
+                git clone "\${GIT_REPO_URL}" .
+                git checkout ${config.branch}
+                
+                cd apps/overlays/${config.environment}/frontend
+                sed -i "s#newName:.*#newName: ${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}#g" kustomization.yaml
+                sed -i 's/newTag:.*/newTag: "${config.imageTag}"/g' kustomization.yaml
+
+                git add kustomization.yaml
+                git -c user.name="${GIT_USER_NAME}" -c user.email="${GIT_USER_EMAIL}" commit -m "${config.commitMessage}"
+                git push origin ${config.branch}
+                
+                echo "Manifests updated successfully"
+            """
+        }
+    }
+}
+
+def createProductionPR(Map config) {
+    dir('manifests-workspace') {
+        withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
+            sh """
+                set -e
+                
+                if [ -z "${config.releaseTag}" ]; then
+                    echo "Error: Release tag not provided" >&2
+                    exit 1
+                fi
+
+                GIT_REPO_URL="http://${GIT_USER_NAME}:\${TOKEN}@gitea.kltn.internal/kltn/healthcare-manifests.git"
+                git clone "\${GIT_REPO_URL}" .
+
+                TEMP_BRANCH="release-prod-${config.releaseTag}"
+                git checkout -b \${TEMP_BRANCH}
+
+                cd apps/overlays/production/frontend
+                sed -i "s#newName:.*#newName: ${GITEA_REGISTRY}/${GITEA_OWNER}/${IMAGE_NAME}#g" kustomization.yaml
+                sed -i 's/newTag:.*/newTag: "${config.imageTag}"/g' kustomization.yaml
+
+                git add kustomization.yaml
+                git -c user.name="${GIT_USER_NAME}" -c user.email="${GIT_USER_EMAIL}" commit -m "chore(prod): update frontend to ${config.releaseTag}"
+                git push origin \${TEMP_BRANCH}
+
+                echo "Creating production pull request for \${TEMP_BRANCH}"
+                
+                PR_PAYLOAD=\$(printf '{"base":"main","head":"%s","title":"Deploy to Production: Frontend %s","body":"This PR was generated automatically by Jenkins for Release %s. Please review carefully before merging."}' \
+                    "\${TEMP_BRANCH}" "${config.releaseTag}" "${config.releaseTag}")
+
+                PR_RESPONSE=\$(curl --silent --show-error --fail-with-body \
+                    -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare-manifests/pulls" \
+                    -H "accept: application/json" \
+                    -H "Authorization: token \${TOKEN}" \
+                    -H "Content-Type: application/json" \
+                    --data "\${PR_PAYLOAD}")
+
+                PR_URL=\$(echo "\${PR_RESPONSE}" | grep -oE '"html_url":"[^"]+"' | head -n 1 | cut -d '"' -f 4 || true)
+                
+                if [ -n "\${PR_URL}" ]; then
+                    echo "Production PR created: \${PR_URL}"
+                else
+                    echo "Production PR created successfully"
+                fi
+            """
         }
     }
 }
