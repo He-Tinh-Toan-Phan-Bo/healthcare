@@ -8,16 +8,13 @@ pipeline {
   }
 
   environment {
-    // Registry Configuration
     GITEA_REGISTRY = "gitea.kltn.internal:80"
     GITEA_OWNER = "kltn"
     GITEA_CREDS_ID = "gitea-token-admin"
 
-    // SonarQube Configuration
     SONAR_SERVER = "sonar-server"
     SONAR_SCANNER = "sonar-scanner"
 
-    // Git Configuration
     GIT_USER_NAME = "thanhdc"
     GIT_USER_EMAIL = "chithanh040804@gmail.com"
     MANIFEST_REPO_URL = "http://gitea.kltn.internal/KLTN/healthcare-manifests.git"
@@ -47,36 +44,36 @@ pipeline {
     stage('Checkout') {
       steps {
         checkout scm
-        echo "Branch: ${env.BRANCH_NAME ?: 'N/A'} | Commit: ${env.GIT_COMMIT?.take(8) ?: 'N/A'}"
+        script {
+          env.SHORT_SHA = sh(script: 'git rev-parse --short=8 HEAD', returnStdout: true).trim()
+          echo "Branch: ${env.BRANCH_NAME ?: 'N/A'} | Commit: ${env.GIT_COMMIT?.take(8) ?: 'N/A'}"
+        }
       }
     }
 
     stage('Detect Changes') {
       steps {
         script {
-          def shortSha = sh(script: 'git rev-parse --short=8 HEAD', returnStdout: true).trim()
-          env.SHORT_SHA = shortSha
+          def allServices = ['frontend', 'auth', 'backend', 'admin']
+          def services = [] as LinkedHashSet
 
           def baseCommit = env.GIT_PREVIOUS_SUCCESSFUL_COMMIT ?: env.GIT_PREVIOUS_COMMIT
-          def services = [] as Set
+          if (!baseCommit) {
+            try {
+              baseCommit = sh(script: 'git rev-parse HEAD~1', returnStdout: true).trim()
+            } catch (ignored) {
+              baseCommit = null
+            }
+          }
 
           if (!baseCommit) {
-            services.addAll(['frontend', 'auth', 'backend', 'admin'])
+            services.addAll(allServices)
           } else {
-            def diffOutput = sh(script: "git diff --name-only ${baseCommit} ${env.GIT_COMMIT}", returnStdout: true).trim()
-            def changedFiles = diffOutput ? diffOutput.split('\n') : []
-
-            def backendSharedPrefixes = [
-              'backend/libs/',
-              'backend/src/',
-              'backend/prisma/',
-              'backend/Dockerfile',
-              'backend/package.json',
-              'backend/pnpm-lock.yaml',
-              'backend/tsconfig.json',
-              'backend/tsconfig.build.json',
-              'backend/nest-cli.json'
-            ]
+            def diffOutput = sh(
+              script: "git diff --name-only ${baseCommit} ${env.GIT_COMMIT}",
+              returnStdout: true
+            ).trim()
+            def changedFiles = diffOutput ? diffOutput.split('\n') as List : []
 
             changedFiles.each { filePath ->
               if (filePath.startsWith('frontend/')) {
@@ -95,15 +92,31 @@ pipeline {
                 services.add('admin')
               }
 
-              if (backendSharedPrefixes.any { prefix -> filePath.startsWith(prefix) }) {
+              if (
+                filePath.startsWith('backend/src/') ||
+                filePath.startsWith('backend/libs/') ||
+                filePath.startsWith('backend/prisma/') ||
+                filePath == 'backend/Dockerfile' ||
+                filePath == 'backend/package.json' ||
+                filePath == 'backend/pnpm-lock.yaml' ||
+                filePath == 'backend/tsconfig.json' ||
+                filePath == 'backend/tsconfig.build.json' ||
+                filePath == 'backend/nest-cli.json'
+              ) {
                 services.addAll(['auth', 'backend', 'admin'])
               }
+            }
+
+            if (services.isEmpty()) {
+              echo 'No deployable service changes detected.'
             }
           }
 
           env.CHANGED_SERVICES = services.join(',')
-          echo "Short SHA: ${env.SHORT_SHA}"
-          echo "Changed services: ${env.CHANGED_SERVICES}"
+          env.DEPLOY_TAG = params.RELEASE_TAG?.trim() ? params.RELEASE_TAG.trim() : env.SHORT_SHA
+
+          echo "Changed services: ${env.CHANGED_SERVICES ?: 'none'}"
+          echo "Deploy tag: ${env.DEPLOY_TAG}"
         }
       }
     }
@@ -168,25 +181,22 @@ pipeline {
       }
     }
 
-    stage('Build & Push') {
+    stage('Build & Push Images') {
       when {
-        expression {
-          return env.CHANGED_SERVICES?.trim()
-        }
+        expression { return env.CHANGED_SERVICES?.trim() }
       }
       steps {
         script {
-          def services = env.CHANGED_SERVICES.split(',')
           dockerLogin()
 
-          services.each { serviceName ->
-            def imageName = "${env.GITEA_REGISTRY}/${env.GITEA_OWNER}/healthcare-${serviceName}"
+          env.CHANGED_SERVICES.split(',').each { serviceName ->
+            def imageName = serviceImageName(serviceName)
             if (serviceName == 'frontend') {
-              sh "docker build -f frontend/Dockerfile -t ${imageName}:${env.SHORT_SHA} frontend"
+              sh "docker build -f frontend/Dockerfile -t ${imageName}:${env.DEPLOY_TAG} frontend"
             } else {
-              sh "docker build -f backend/Dockerfile --build-arg APP_NAME=${serviceName} -t ${imageName}:${env.SHORT_SHA} backend"
+              sh "docker build -f backend/Dockerfile --build-arg APP_NAME=${serviceName} -t ${imageName}:${env.DEPLOY_TAG} backend"
             }
-            sh "docker push ${imageName}:${env.SHORT_SHA}"
+            sh "docker push ${imageName}:${env.DEPLOY_TAG}"
           }
         }
       }
@@ -204,9 +214,10 @@ pipeline {
         script {
           updateManifests(
             environment: 'staging',
-            imageTag: env.SHORT_SHA,
-            branch: env.MANIFEST_REPO_BRANCH,
-            commitMessage: "ci(staging): update image tags to ${env.SHORT_SHA}"
+            services: env.CHANGED_SERVICES.split(','),
+            imageTag: env.DEPLOY_TAG,
+            branch: MANIFEST_REPO_BRANCH,
+            commitMessage: "ci(staging): update healthcare images to ${env.DEPLOY_TAG}"
           )
         }
       }
@@ -226,12 +237,54 @@ pipeline {
               echo "Starting production release for: ${params.RELEASE_TAG}"
               withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
                 sh """
+                  set -e
                   git config user.name "${GIT_USER_NAME}"
                   git config user.email "${GIT_USER_EMAIL}"
                   git tag ${params.RELEASE_TAG}
-                  git push http://${GIT_USER_NAME}:
-                    \${TOKEN}@gitea.kltn.internal/kltn/healthcare.git ${params.RELEASE_TAG}
+                  git push http://${GIT_USER_NAME}:\${TOKEN}@gitea.kltn.internal/kltn/healthcare.git ${params.RELEASE_TAG}
                 """
+              }
+            }
+          }
+        }
+
+        stage('Build Production Images') {
+          steps {
+            script {
+              dockerLogin()
+
+              env.CHANGED_SERVICES.split(',').each { serviceName ->
+                def imageName = serviceImageName(serviceName)
+                if (serviceName == 'frontend') {
+                  sh "docker build -f frontend/Dockerfile -t ${imageName}:${env.DEPLOY_TAG} frontend"
+                } else {
+                  sh "docker build -f backend/Dockerfile --build-arg APP_NAME=${serviceName} -t ${imageName}:${env.DEPLOY_TAG} backend"
+                }
+                sh "docker push ${imageName}:${env.DEPLOY_TAG}"
+              }
+            }
+          }
+        }
+
+        stage('Create Gitea Release') {
+          steps {
+            script {
+              echo "Creating official release on Gitea for tag: ${params.RELEASE_TAG}"
+              withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
+                sh '''
+                  set -e
+                  RELEASE_PAYLOAD=$(printf '{"tag_name":"%s","name":"Release %s","body":"Production release %s automatically built and pushed by Jenkins."}' \
+                    "${RELEASE_TAG}" "${RELEASE_TAG}" "${RELEASE_TAG}")
+
+                  curl --silent --show-error --fail-with-body \
+                    -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare/releases" \
+                    -H "accept: application/json" \
+                    -H "Authorization: token ${TOKEN}" \
+                    -H "Content-Type: application/json" \
+                    --data "${RELEASE_PAYLOAD}"
+
+                  echo "Gitea release created successfully"
+                '''
               }
             }
           }
@@ -242,7 +295,8 @@ pipeline {
             script {
               createProductionPR(
                 releaseTag: params.RELEASE_TAG,
-                imageTag: env.SHORT_SHA
+                services: env.CHANGED_SERVICES.split(','),
+                imageTag: env.DEPLOY_TAG
               )
             }
           }
@@ -254,11 +308,20 @@ pipeline {
   post {
     always {
       script {
+        echo 'Post-build cleanup'
         sh "docker logout ${GITEA_REGISTRY} || true"
         sh "docker image prune -f || true"
         sh "docker builder prune -f || true"
         cleanWs()
       }
+    }
+
+    success {
+      echo 'Pipeline completed successfully'
+    }
+
+    failure {
+      echo 'Pipeline failed - review stage logs for details'
     }
   }
 }
@@ -272,15 +335,30 @@ def dockerLogin() {
   }
 }
 
-def updateManifests(Map config) {
-  def services = env.CHANGED_SERVICES?.trim() ? env.CHANGED_SERVICES.split(',') : []
+def serviceImageName(String serviceName) {
+  return "${GITEA_REGISTRY}/${GITEA_OWNER}/healthcare-${serviceName}"
+}
+
+def manifestOverlayPath(String environment, String serviceName) {
+  def basePath = "apps/overlays/${environment}"
   def overlayMap = [
-    frontend: 'apps/overlays/staging/frontend/kustomization.yaml',
-    auth: 'apps/overlays/staging/auth-service/kustomization.yaml',
-    backend: 'apps/overlays/staging/backend-service/kustomization.yaml',
-    admin: 'apps/overlays/staging/admin-service/kustomization.yaml'
+    frontend: "${basePath}/frontend/kustomization.yaml",
+    auth: "${basePath}/auth-service/kustomization.yaml",
+    backend: "${basePath}/backend-service/kustomization.yaml",
+    admin: "${basePath}/admin-service/kustomization.yaml",
   ]
 
+  return overlayMap[serviceName]
+}
+
+def updateImageReference(String filePath, String imageName, String imageTag) {
+  def fileContent = readFile(file: filePath)
+  fileContent = fileContent.replaceAll(/(?m)^(\s*newName:\s*).*$/, '$1' + imageName)
+  fileContent = fileContent.replaceAll(/(?m)^(\s*newTag:\s*).*$/, '$1"' + imageTag + '"')
+  writeFile file: filePath, text: fileContent
+}
+
+def updateManifests(Map config) {
   dir('manifests-workspace') {
     withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
       sh """
@@ -290,15 +368,14 @@ def updateManifests(Map config) {
         git checkout ${config.branch}
       """
 
-      services.each { serviceName ->
-        def filePath = overlayMap[serviceName]
+      config.services.each { serviceName ->
+        def filePath = manifestOverlayPath(config.environment, serviceName)
         if (!filePath) {
           echo "No manifest mapping for service: ${serviceName}"
           return
         }
 
-        def imageName = "${GITEA_REGISTRY}/${GITEA_OWNER}/healthcare-${serviceName}"
-        sh "python3 - <<'PY'\nfrom pathlib import Path\nimport re\npath = Path('${filePath}')\ntext = path.read_text()\ntext = re.sub(r'(?m)^(\\s*newName:\\s*).*$','\\1${imageName}', text)\ntext = re.sub(r'(?m)^(\\s*newTag:\\s*).*$','\\1\"${config.imageTag}\"', text)\npath.write_text(text)\nprint(f'Updated {path}')\nPY"
+        updateImageReference(filePath, serviceImageName(serviceName), config.imageTag)
       }
 
       sh "git add ."
@@ -310,14 +387,6 @@ def updateManifests(Map config) {
 }
 
 def createProductionPR(Map config) {
-  def services = env.CHANGED_SERVICES?.trim() ? env.CHANGED_SERVICES.split(',') : []
-  def overlayMap = [
-    frontend: 'apps/overlays/production/frontend/kustomization.yaml',
-    auth: 'apps/overlays/production/auth-service/kustomization.yaml',
-    backend: 'apps/overlays/production/backend-service/kustomization.yaml',
-    admin: 'apps/overlays/production/admin-service/kustomization.yaml'
-  ]
-
   dir('manifests-workspace') {
     withCredentials([string(credentialsId: "${GITEA_CREDS_ID}", variable: 'TOKEN')]) {
       sh """
@@ -334,30 +403,29 @@ def createProductionPR(Map config) {
         git checkout -b \${TEMP_BRANCH}
       """
 
-      services.each { serviceName ->
-        def filePath = overlayMap[serviceName]
+      config.services.each { serviceName ->
+        def filePath = manifestOverlayPath('production', serviceName)
         if (!filePath) {
           echo "No manifest mapping for service: ${serviceName}"
           return
         }
 
-        def imageName = "${GITEA_REGISTRY}/${GITEA_OWNER}/healthcare-${serviceName}"
-        sh "python3 - <<'PY'\nfrom pathlib import Path\nimport re\npath = Path('${filePath}')\ntext = path.read_text()\ntext = re.sub(r'(?m)^(\\s*newName:\\s*).*$','\\1${imageName}', text)\ntext = re.sub(r'(?m)^(\\s*newTag:\\s*).*$','\\1\"${config.imageTag}\"', text)\npath.write_text(text)\nprint(f'Updated {path}')\nPY"
+        updateImageReference(filePath, serviceImageName(serviceName), config.imageTag)
       }
 
       sh "git add ."
-      sh "git -c user.name=\"${GIT_USER_NAME}\" -c user.email=\"${GIT_USER_EMAIL}\" commit -m \"chore(prod): update image tags to ${config.imageTag}\""
-      sh "git push origin \${TEMP_BRANCH}"
+      sh "git -c user.name=\"${GIT_USER_NAME}\" -c user.email=\"${GIT_USER_EMAIL}\" commit -m \"chore(prod): update healthcare images to ${config.imageTag}\" || echo 'No changes to commit'"
+      sh "git push origin release-prod-${config.releaseTag}"
 
       sh """
-        PR_PAYLOAD=\$(printf '{"base":"main","head":"%s","title":"Deploy to Production: %s","body":"Release %s - image tag %s"}' \\
-          "\${TEMP_BRANCH}" "${config.releaseTag}" "${config.releaseTag}" "${config.imageTag}")
+        PR_PAYLOAD=\$(printf '{"base":"main","head":"%s","title":"Deploy to Production: %s","body":"Release %s - image tag %s"}' \
+          "release-prod-${config.releaseTag}" "${config.releaseTag}" "${config.releaseTag}" "${config.imageTag}")
 
-        curl --silent --show-error --fail-with-body \\
-          -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare-manifests/pulls" \\
-          -H "accept: application/json" \\
-          -H "Authorization: token \${TOKEN}" \\
-          -H "Content-Type: application/json" \\
+        curl --silent --show-error --fail-with-body \
+          -X POST "http://gitea.kltn.internal/api/v1/repos/kltn/healthcare-manifests/pulls" \
+          -H "accept: application/json" \
+          -H "Authorization: token \${TOKEN}" \
+          -H "Content-Type: application/json" \
           --data "\${PR_PAYLOAD}"
       """
     }
